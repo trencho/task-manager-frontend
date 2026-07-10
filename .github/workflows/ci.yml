@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: lint + test + build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      # `npm ci` installs exactly the committed lockfile and fails if package.json and
+      # package-lock.json disagree. `npm install` would quietly resolve around a conflict.
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      # This suite once silently ran ZERO tests for months: jest resolved
+      # testEnvironment 'jsdom' to a jest-environment-jsdom major that its constructor
+      # could not load, every suite failed to load, and nobody ran it. Jest exits
+      # non-zero when no tests are found, so CI is the guard against that recurring.
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
