@@ -33,6 +33,21 @@
         </option>
       </select>
     </div>
+    <div>
+      <label for="task-priority">Priority:</label>
+      <select
+        id="task-priority"
+        v-model="task.priority"
+      >
+        <option
+          v-for="option in priorities"
+          :key="option.value"
+          :value="option.value"
+        >
+          {{ option.label }}
+        </option>
+      </select>
+    </div>
     <button type="submit">
       {{ isEditing ? 'Update' : 'Create' }} Task
     </button>
@@ -40,6 +55,7 @@
 </template>
 
 <script>
+import { TASK_PRIORITIES } from '@/constants/taskPriority';
 import { TASK_STATUSES } from '@/constants/taskStatus';
 
 export default {
@@ -56,7 +72,8 @@ export default {
   emits: ['submit-task'],
   data() {
     return {
-      statuses: TASK_STATUSES
+      statuses: TASK_STATUSES,
+      priorities: TASK_PRIORITIES
     };
   },
   methods: {

@@ -8,6 +8,7 @@
       >
         <strong class="task-title">{{ task.title }}</strong>: {{ task.description }} - <em>Due: {{ task.dueDate }}</em>
         <span class="task-status">{{ statusLabel(task.status) }}</span>
+        <span class="task-priority">{{ priorityLabel(task.priority) }}</span>
         <button
           class="edit"
           @click="editTask(task)"
@@ -45,6 +46,7 @@
 </template>
 
 <script>
+import { priorityLabel } from '@/constants/taskPriority';
 import { statusLabel } from '@/constants/taskStatus';
 
 export default {
@@ -65,6 +67,7 @@ export default {
   emits: ['edit-task', 'delete-task', 'change-page'],
   methods: {
     statusLabel,
+    priorityLabel,
     editTask(task) {
       this.$emit('edit-task', task);
     },
