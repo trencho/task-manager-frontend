@@ -1,6 +1,7 @@
 {
   "name": "task-manager-vue",
   "version": "1.0.0",
+  "type": "module",
   "private": true,
   "engines": {
     "node": ">=22.0.0"
@@ -9,7 +10,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint . --ext .js,.vue",
+    "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage"
@@ -20,49 +21,17 @@
     "vue-router": "5.1.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@vitejs/plugin-vue": "6.0.7",
     "@vitest/coverage-v8": "4.1.10",
     "@vue/test-utils": "2.4.11",
-    "eslint": "8.57.1",
-    "eslint-plugin-vue": "9.33.0",
+    "eslint": "^10.6.0",
+    "eslint-plugin-vue": "^10.9.2",
+    "globals": "^17.7.0",
     "jsdom": "29.1.1",
     "vite": "8.1.4",
     "vitest": "4.1.10",
     "vue-eslint-parser": "10.4.1"
-  },
-  "eslintConfig": {
-    "root": true,
-    "ignorePatterns": [
-      "dist/",
-      "coverage/",
-      "node_modules/"
-    ],
-    "env": {
-      "browser": true,
-      "es6": true,
-      "node": true
-    },
-    "extends": [
-      "eslint:recommended",
-      "plugin:vue/vue3-recommended"
-    ],
-    "parser": "vue-eslint-parser",
-    "parserOptions": {
-      "ecmaVersion": "latest",
-      "sourceType": "module"
-    },
-    "rules": {
-      "vue/no-mutating-props": "off"
-    },
-    "globals": {
-      "describe": "readonly",
-      "it": "readonly",
-      "expect": "readonly",
-      "beforeEach": "readonly",
-      "afterEach": "readonly",
-      "beforeAll": "readonly",
-      "afterAll": "readonly"
-    }
   },
   "browserslist": [
     "> 1%",
