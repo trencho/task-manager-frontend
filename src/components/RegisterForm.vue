@@ -1,5 +1,9 @@
 <template>
   <form @submit.prevent="register">
+    <ErrorBanner
+      :message="error"
+      @dismiss="error = ''"
+    />
     <div>
       <label>Username:</label>
       <input
@@ -31,18 +35,23 @@
 </template>
 
 <script>
+import ErrorBanner from '@/components/ErrorBanner.vue';
 import axiosInstance from '@/utils/axiosSetup';
+import { apiErrorMessage } from '@/utils/errorMessage';
 
 export default {
+  components: { ErrorBanner },
   data() {
     return {
       username: '',
       email: '',
-      password: ''
+      password: '',
+      error: ''
     };
   },
   methods: {
     async register() {
+      this.error = '';
       try {
         await axiosInstance.post('/api/auth/signup', {
           username: this.username,
@@ -51,7 +60,9 @@ export default {
         });
         this.$router.push('/login');
       } catch (error) {
-        alert('Registration failed: ' + error.response.data);
+        // Was `error.response.data`, which threw a TypeError of its own whenever the request
+        // never reached the server.
+        this.error = apiErrorMessage(error);
       }
     }
   }

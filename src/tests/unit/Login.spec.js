@@ -1,9 +1,14 @@
 import {vi} from 'vitest';
-import { flushPromises, shallowMount } from '@vue/test-utils';
-import LoginForm from '@/components/LoginForm.vue';
-import axios from 'axios';
+import { flushPromises, mount } from '@vue/test-utils';
 
-vi.mock('axios');
+// The form posts through the shared instance, not bare axios: only that instance carries the
+// configured baseURL.
+vi.mock('@/utils/axiosSetup', () => ({
+    default: { post: vi.fn() }
+}));
+
+import LoginForm from '@/components/LoginForm.vue';
+import axiosInstance from '@/utils/axiosSetup';
 
 describe('LoginForm.vue', () => {
     let push;
@@ -14,12 +19,14 @@ describe('LoginForm.vue', () => {
         push = vi.fn();
     });
 
-    const mountForm = () => shallowMount(LoginForm, {
+    // mount, not shallowMount: shallowMount stubs ErrorBanner and the message never renders,
+    // so the assertions below would pass against a banner that displays nothing.
+    const mountForm = () => mount(LoginForm, {
         global: { mocks: { $router: { push } } }
     });
 
     it('Logs in a user successfully', async () => {
-        axios.post.mockResolvedValue({
+        axiosInstance.post.mockResolvedValue({
             data: { accessToken: 'mockAccessToken', refreshToken: 'mockRefreshToken' }
         });
 
@@ -28,18 +35,18 @@ describe('LoginForm.vue', () => {
         await wrapper.find('form').trigger('submit');
         await flushPromises();
 
-        expect(axios.post).toHaveBeenCalledWith('/api/auth/login', {
+        expect(axiosInstance.post).toHaveBeenCalledWith('/api/auth/login', {
             username: 'testuser',
             password: 'password123'
         });
         expect(localStorage.getItem('access_token')).toBe('mockAccessToken');
         expect(localStorage.getItem('refresh_token')).toBe('mockRefreshToken');
         expect(push).toHaveBeenCalledWith('/tasks');
+        expect(wrapper.find('[role="alert"]').exists()).toBe(false);
     });
 
-    it('Does not store tokens or navigate when the credentials are rejected', async () => {
-        vi.spyOn(window, 'alert').mockImplementation(() => {});
-        axios.post.mockRejectedValue(new Error('Unauthorized'));
+    it('Shows the server message and does not store tokens when the credentials are rejected', async () => {
+        axiosInstance.post.mockRejectedValue({ response: { data: 'Invalid credentials' } });
 
         const wrapper = mountForm();
         await wrapper.setData({ username: 'testuser', password: 'wrong' });
@@ -48,6 +55,48 @@ describe('LoginForm.vue', () => {
 
         expect(localStorage.getItem('access_token')).toBeNull();
         expect(push).not.toHaveBeenCalled();
-        expect(window.alert).toHaveBeenCalled();
+        expect(wrapper.find('[role="alert"]').text()).toContain('Invalid credentials');
+    });
+
+    it('Renders a message rather than crashing when the request never reached the server', async () => {
+        // No `response` property at all -- the shape axios rejects with on a network failure.
+        axiosInstance.post.mockRejectedValue(new Error('Network Error'));
+
+        const wrapper = mountForm();
+        await wrapper.setData({ username: 'testuser', password: 'password123' });
+        await wrapper.find('form').trigger('submit');
+        await flushPromises();
+
+        expect(wrapper.find('[role="alert"]').text()).toContain('Network Error');
+        expect(push).not.toHaveBeenCalled();
+    });
+
+    it('Dismisses the banner', async () => {
+        axiosInstance.post.mockRejectedValue({ response: { data: 'Invalid credentials' } });
+
+        const wrapper = mountForm();
+        await wrapper.find('form').trigger('submit');
+        await flushPromises();
+        expect(wrapper.find('[role="alert"]').exists()).toBe(true);
+
+        await wrapper.find('.error-banner__dismiss').trigger('click');
+        expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    });
+
+    it('Clears a previous error when the form is resubmitted successfully', async () => {
+        axiosInstance.post.mockRejectedValueOnce({ response: { data: 'Invalid credentials' } });
+
+        const wrapper = mountForm();
+        await wrapper.find('form').trigger('submit');
+        await flushPromises();
+        expect(wrapper.find('[role="alert"]').exists()).toBe(true);
+
+        axiosInstance.post.mockResolvedValueOnce({
+            data: { accessToken: 'a', refreshToken: 'r' }
+        });
+        await wrapper.find('form').trigger('submit');
+        await flushPromises();
+
+        expect(wrapper.find('[role="alert"]').exists()).toBe(false);
     });
 });

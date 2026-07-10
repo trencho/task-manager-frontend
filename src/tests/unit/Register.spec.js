@@ -1,5 +1,5 @@
 import {vi} from 'vitest';
-import { flushPromises, shallowMount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import RegisterForm from '@/components/RegisterForm.vue';
 import axiosInstance from '@/utils/axiosSetup';
 
@@ -20,7 +20,9 @@ describe('RegisterForm.vue', () => {
         push = vi.fn();
     });
 
-    const mountForm = () => shallowMount(RegisterForm, {
+    // mount, not shallowMount: shallowMount stubs ErrorBanner, so a banner rendering nothing
+    // would still satisfy these assertions.
+    const mountForm = () => mount(RegisterForm, {
         global: { mocks: { $router: { push } } }
     });
 
@@ -42,22 +44,46 @@ describe('RegisterForm.vue', () => {
             password: 'password123'
         });
         expect(push).toHaveBeenCalledWith('/login');
+        expect(wrapper.find('[role="alert"]').exists()).toBe(false);
     });
 
-    it('Does not navigate when registration is rejected', async () => {
-        vi.spyOn(window, 'alert').mockImplementation(() => {});
+    it('Shows the server message and does not navigate when registration is rejected', async () => {
         axiosInstance.post.mockRejectedValue({ response: { data: 'Username already taken' } });
 
         const wrapper = mountForm();
-        await wrapper.setData({
-            username: 'testuser',
-            email: 'testuser@mail.com',
-            password: 'password123'
-        });
         await wrapper.find('form').trigger('submit');
         await flushPromises();
 
         expect(push).not.toHaveBeenCalled();
-        expect(window.alert).toHaveBeenCalledWith('Registration failed: Username already taken');
+        expect(wrapper.find('[role="alert"]').text()).toContain('Username already taken');
+    });
+
+    it('Joins the validation failures the backend returns as an array', async () => {
+        axiosInstance.post.mockRejectedValue({
+            response: { data: ['email: Email is required', 'password: too short'] }
+        });
+
+        const wrapper = mountForm();
+        await wrapper.find('form').trigger('submit');
+        await flushPromises();
+
+        const text = wrapper.find('[role="alert"]').text();
+        expect(text).toContain('email: Email is required');
+        expect(text).toContain('password: too short');
+    });
+
+    /**
+     * The handler used to read `error.response.data` unguarded. On a network failure there is no
+     * `response`, so the catch block threw a TypeError of its own and the user saw nothing.
+     */
+    it('Renders a message rather than crashing when the request never reached the server', async () => {
+        axiosInstance.post.mockRejectedValue(new Error('Network Error'));
+
+        const wrapper = mountForm();
+        await wrapper.find('form').trigger('submit');
+        await flushPromises();
+
+        expect(wrapper.find('[role="alert"]').text()).toContain('Network Error');
+        expect(push).not.toHaveBeenCalled();
     });
 });
