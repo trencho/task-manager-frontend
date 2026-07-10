@@ -109,6 +109,7 @@ A request is only retried once — a second `401` for the same request rejects.
 | Register | `POST /api/auth/signup` |
 | Sign in | `POST /api/auth/login` |
 | Refresh | `POST /api/auth/refresh-token` |
+| Sign out | `POST /api/auth/logout` (revokes the refresh token) |
 | List | `GET /api/tasks?page={n}&size=10` (paginated) |
 | Create | `POST /api/tasks` |
 | Update | `PUT /api/tasks/{id}` |
@@ -136,8 +137,8 @@ Candidate features, derived from this README and the gaps between it and the cod
    would be both accessible and testable.
 5. **Introduce a store (Pinia)** *if* shared state grows beyond auth tokens. Not needed today —
    and an earlier version of this README claimed one existed when it did not.
-6. **Log out server-side.** `LogoutButton` clears `localStorage`; the refresh token remains valid
-   until it expires. Needs a backend revocation endpoint.
+6. ~~**Log out server-side.**~~ Done. `LogoutButton` calls `POST /api/auth/logout`, which revokes
+   the refresh token. The local session is cleared even if that call fails.
 7. ~~**Replace Vue CLI with Vite.**~~ Done. `npm audit` now reports **0** advisories, down from 9.
 
 ## Notes
