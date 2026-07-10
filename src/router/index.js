@@ -12,21 +12,23 @@ const routes = [
 ];
 
 const router = createRouter({
-  mode: 'history',
+  // `mode` was a Vue Router 3 option. Router 4 and 5 take `history`, and ignored it silently.
   history: createWebHistory(),
   routes
 });
 
-router.beforeEach((to, from, next) => {
+// Returning the destination rather than calling next(): the next() callback is deprecated in
+// vue-router 5 and warns on every guarded navigation.
+router.beforeEach((to) => {
   const isAuthenticated = Boolean(getAccessToken());
 
   if (to.matched.some(record => record.meta.requiresAuth) && !isAuthenticated) {
-    next({ name: 'Login' });
-  } else if (to.matched.some(record => record.meta.requiresGuest) && isAuthenticated) {
-    next({ name: 'Tasks' });
-  } else {
-    next();
+    return { name: 'Login' };
   }
+  if (to.matched.some(record => record.meta.requiresGuest) && isAuthenticated) {
+    return { name: 'Tasks' };
+  }
+  return true;
 });
 
 export default router;
