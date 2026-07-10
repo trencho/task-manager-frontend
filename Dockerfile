@@ -8,7 +8,7 @@
 # node:alpine stage whose CMD invoked an nginx that was not installed. It could not build,
 # and could not have run if it had.
 
-ARG NODE_VERSION=22.20.0
+ARG NODE_VERSION=24.18.0
 ARG NGINX_VERSION=1.29-alpine
 
 ################################################################################
