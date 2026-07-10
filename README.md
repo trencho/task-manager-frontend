@@ -37,14 +37,21 @@ The backend URL comes from `VITE_API_URL`. Only `VITE_`-prefixed variables reach
 
 Leave it empty (the default) and the app issues **same-origin relative requests** to `/api/...`.
 In development the Vite dev server proxies those to `VITE_DEV_PROXY_TARGET`, which defaults to
-`http://localhost:80` — the backend's default port. In production, either set `VITE_API_URL` at
-build time or put a reverse proxy in front of nginx.
+`http://localhost:80` — the backend's default port. In the Docker image, nginx proxies them to
+`BACKEND_URL`. Set `VITE_API_URL` only to point a bundle at a *different* origin, which then
+needs CORS on the backend.
 
 ```bash
 npm run dev                                   # proxies /api to http://localhost:80
 VITE_DEV_PROXY_TARGET=http://localhost:9000 npm run dev
 VITE_API_URL=https://api.example.com npm run build
 ```
+
+| Variable | Where | Default | Notes |
+|---|---|---|---|
+| `VITE_API_URL` | build time | empty | Compiled into the bundle. Empty means same-origin. |
+| `VITE_DEV_PROXY_TARGET` | `npm run dev` | `http://localhost:80` | Dev server only |
+| `BACKEND_URL` | container run time | `http://spring:80` | Where nginx forwards `/api`. An unset value makes nginx refuse to start. |
 
 See [`.env.example`](.env.example).
 

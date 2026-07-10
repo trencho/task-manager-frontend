@@ -9,7 +9,10 @@ services:
     expose:
       - 8080
     environment:
-      NODE_ENV: production
+      # Where nginx forwards /api. The default names the backend compose project's `spring`
+      # service, which only resolves when both stacks share a network -- run this stack with
+      # BACKEND_URL pointing at wherever the API actually lives.
+      BACKEND_URL: ${BACKEND_URL:-http://spring:80}
     image: task-manager-vue:latest
     networks:
       - network

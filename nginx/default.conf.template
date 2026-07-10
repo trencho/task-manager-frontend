@@ -1,0 +1,28 @@
+server {
+  listen 80;
+
+  # The bundle is built with an empty VITE_API_URL, so it issues same-origin requests to /api.
+  # Without this block they fell through to `location /` and were rewritten to index.html: the
+  # SPA received HTML where it expected JSON.
+  #
+  # ${BACKEND_URL} is substituted at container start by nginx's own entrypoint, which renders
+  # /etc/nginx/templates/*.template into /etc/nginx/conf.d/. NGINX_ENVSUBST_FILTER (set in the
+  # Dockerfile) restricts substitution to BACKEND_URL, so nginx's own $host, $uri and friends
+  # survive -- an unfiltered envsubst would blank out any that collided with an env var.
+  location /api {
+    proxy_pass ${BACKEND_URL};
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    # The backend rate-limits by client address. It trusts this header only when
+    # RATE_LIMIT_TRUST_FORWARDED_FOR is set, which is correct exactly here: this proxy appends
+    # the real peer, so a value the client forged cannot be the first hop.
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location / {
+    root /usr/share/nginx/html;
+    index index.html;
+    try_files $uri $uri/ /index.html;
+  }
+}

@@ -35,10 +35,16 @@ RUN npm run build
 # Serve the static bundle. nginx:alpine already runs as a non-root worker.
 FROM nginx:${NGINX_VERSION} AS final
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Rendered into /etc/nginx/conf.d/default.conf at container start. A default is essential:
+# an unset BACKEND_URL renders `proxy_pass ;` and nginx refuses to start.
+ENV BACKEND_URL=http://spring:80
+# Substitute only BACKEND_URL, leaving nginx's own $host, $uri, $scheme intact.
+ENV NGINX_ENVSUBST_FILTER=BACKEND_URL
+
+COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /usr/src/app/dist /usr/share/nginx/html
 
-# nginx.conf listens on 80; docker-compose maps 8080:80.
+# The template listens on 80; docker-compose maps 8080:80.
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
