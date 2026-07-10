@@ -1,7 +1,13 @@
 import axios from 'axios';
 import { getAccessToken, getRefreshToken, setAccessToken, clearTokens } from '@/utils/auth';
 
-const axiosInstance = axios.create();
+// Unset means "same origin", so requests stay relative (`/api/...`) and the Vite dev-server
+// proxy forwards them. The old VUE_APP_API_URL was never read by any code: axios.create()
+// took no baseURL, so a built bundle called /api on nginx's own origin, where nothing
+// answers. Set VITE_API_URL at build time to point a deployed bundle at the API.
+const axiosInstance = axios.create({
+    baseURL: import.meta.env.VITE_API_URL || ''
+});
 
 axiosInstance.interceptors.request.use((config) => {
     const accessToken = getAccessToken();

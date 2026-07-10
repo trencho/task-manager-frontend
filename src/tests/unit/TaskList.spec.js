@@ -1,3 +1,4 @@
+import {vi} from 'vitest';
 import {shallowMount} from '@vue/test-utils';
 import TaskList from '@/components/TaskList.vue';
 
@@ -12,7 +13,7 @@ const mountList = (props = {}) => shallowMount(TaskList, {
 
 describe('TaskList.vue', () => {
     afterEach(() => {
-        jest.restoreAllMocks();
+        vi.restoreAllMocks();
     });
 
     it('Renders one row per task', () => {
@@ -46,7 +47,7 @@ describe('TaskList.vue', () => {
     });
 
     it('Emits delete-task only after the user confirms', async () => {
-        jest.spyOn(window, 'confirm').mockReturnValue(true);
+        vi.spyOn(window, 'confirm').mockReturnValue(true);
         const wrapper = mountList();
 
         await wrapper.findAll('.task-item')[0].findAll('button')[1].trigger('click');
@@ -55,7 +56,7 @@ describe('TaskList.vue', () => {
     });
 
     it('Does not emit delete-task when the user cancels', async () => {
-        jest.spyOn(window, 'confirm').mockReturnValue(false);
+        vi.spyOn(window, 'confirm').mockReturnValue(false);
         const wrapper = mountList();
 
         await wrapper.findAll('.task-item')[0].findAll('button')[1].trigger('click');

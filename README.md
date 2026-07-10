@@ -10,8 +10,8 @@ A single-page task manager. Register, sign in, and manage your own tasks. The cl
 | Framework | Vue 3.5 (Options API, single-file components) |
 | Routing | vue-router 5, with per-route auth guards |
 | HTTP | axios, with a shared instance that attaches the JWT and refreshes it on `401` |
-| Build | Vue CLI 5 over webpack 5 |
-| Tests | Jest 29 + `@vue/test-utils` 2 |
+| Build | Vite 8 |
+| Tests | Vitest 4 + `@vue/test-utils` 2 |
 | Lint | ESLint 8 + `eslint-plugin-vue` |
 | Package manager | **npm** (`package-lock.json` is committed) |
 | Deploy | Docker → nginx |
@@ -32,27 +32,32 @@ of quietly resolving around the conflict.
 
 ## Configuration
 
-The backend URL comes from `VUE_APP_API_URL` in `.env`. Only `VUE_APP_`-prefixed variables reach
-the bundle, and **whatever you put there is compiled into the published JavaScript** — never place
-a secret in it.
+The backend URL comes from `VITE_API_URL`. Only `VITE_`-prefixed variables reach the bundle, and
+**whatever you put there is compiled into the published JavaScript** — never place a secret in it.
 
-The committed default is `http://spring`, the Docker Compose service hostname. That does not
-resolve from a browser running outside the compose network. To run the SPA locally against a
-backend on your machine, point it at the real address. The backend listens on port `80` unless
-you override its `SERVER_PORT`:
+Leave it empty (the default) and the app issues **same-origin relative requests** to `/api/...`.
+In development the Vite dev server proxies those to `VITE_DEV_PROXY_TARGET`, which defaults to
+`http://localhost:80` — the backend's default port. In production, either set `VITE_API_URL` at
+build time or put a reverse proxy in front of nginx.
 
 ```bash
-VUE_APP_API_URL=http://localhost:80 npm run dev
+npm run dev                                   # proxies /api to http://localhost:80
+VITE_DEV_PROXY_TARGET=http://localhost:9000 npm run dev
+VITE_API_URL=https://api.example.com npm run build
 ```
+
+See [`.env.example`](.env.example).
 
 ## Scripts
 
 | Command | Does |
 |---|---|
-| `npm run dev` | Dev server with hot reload |
+| `npm run dev` | Vite dev server with HMR on `:8080` |
 | `npm run build` | Production bundle into `dist/` |
+| `npm run preview` | Serve the built bundle locally |
 | `npm run lint` | ESLint |
-| `npm test` | Jest, 25 tests |
+| `npm test` | Vitest, 31 tests |
+| `npm run coverage` | Vitest + v8 coverage |
 
 CI runs `npm ci && npm run lint && npm test && npm run build` on every push and pull request.
 See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
@@ -61,7 +66,7 @@ See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 ```text
 src/
-├── main.js                  app entry
+├── main.js                  app entry (loaded by /index.html at the repo root)
 ├── App.vue                  root, renders <router-view>
 ├── router/index.js          routes + navigation guards
 ├── views/
@@ -133,12 +138,9 @@ Candidate features, derived from this README and the gaps between it and the cod
    and an earlier version of this README claimed one existed when it did not.
 6. **Log out server-side.** `LogoutButton` clears `localStorage`; the refresh token remains valid
    until it expires. Needs a backend revocation endpoint.
-7. **Replace Vue CLI with Vite.** Vue CLI is unmaintained; its frozen dependency chain is the sole
-   source of the project's remaining `npm audit` advisories, none of which ship in the bundle.
+7. ~~**Replace Vue CLI with Vite.**~~ Done. `npm audit` now reports **0** advisories, down from 9.
 
 ## Notes
 
-- `npm audit` reports advisories in build tooling only. `npm audit --omit=dev` reports **0** —
-  nothing vulnerable reaches the browser.
-- Do **not** run `npm audit fix --force`. Its proposed "fix" downgrades `@vue/cli-*` from 5.0.9 to
-  3.12.1, which breaks the build.
+- `npm audit` reports **0 vulnerabilities**. The 9 advisories that used to sit in the build chain
+  left with Vue CLI.

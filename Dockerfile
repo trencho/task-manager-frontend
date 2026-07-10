@@ -4,7 +4,7 @@
 #
 # The previous version of this file was an unmodified `docker init` Node template. It
 # bind-mounted a yarn.lock that does not exist (this project uses npm), copied from
-# /usr/src/app/build when Vue CLI emits dist/, never copied nginx.conf, and ended in a
+# /usr/src/app/build when the bundler emits dist/, never copied nginx.conf, and ended in a
 # node:alpine stage whose CMD invoked an nginx that was not installed. It could not build,
 # and could not have run if it had.
 
@@ -24,10 +24,11 @@ RUN --mount=type=cache,target=/root/.npm npm ci
 
 COPY . .
 
-# Vue CLI writes to dist/. The API base URL is baked into the bundle at build time, so it
-# must be supplied here rather than at runtime.
-ARG VUE_APP_API_URL
-ENV VUE_APP_API_URL=${VUE_APP_API_URL}
+# Vite writes to dist/. Only VITE_-prefixed variables reach the bundle, and their values are
+# compiled into it, so the API base URL must be supplied at build time, not at runtime. Leave
+# it empty to emit same-origin relative requests for a reverse proxy to handle.
+ARG VITE_API_URL
+ENV VITE_API_URL=${VITE_API_URL}
 RUN npm run build
 
 ################################################################################

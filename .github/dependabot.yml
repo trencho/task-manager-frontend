@@ -11,28 +11,6 @@ updates:
       minor-and-patch:
         update-types: [minor, patch]
     ignore:
-      # Vue CLI is unmaintained: 5.0.8 shipped in 2022 and 5.0.9 is the only release since.
-      # Dependabot's only "fix" for its frozen chain is a downgrade to 3.12.1, which breaks
-      # the build. These stay pinned until the project migrates to Vite.
-      - dependency-name: "@vue/cli-*"
-
-      # The Jest toolchain must move as one unit. @vue/vue3-jest@29.2.6 is its newest
-      # release and peer-requires jest@29.x and babel-jest@29.x; bumping any single one
-      # to 30 breaks the suite. jest-environment-jsdom@30 against jest@29 is exactly the
-      # skew that once made every spec fail to load, so the suite ran zero tests.
-      - dependency-name: "jest"
-        update-types: [version-update:semver-major]
-      - dependency-name: "jest-environment-jsdom"
-        update-types: [version-update:semver-major]
-      - dependency-name: "babel-jest"
-        update-types: [version-update:semver-major]
-      - dependency-name: "@vue/vue3-jest"
-        update-types: [version-update:semver-major]
-
-      # Babel 8 is a breaking major and Vue CLI 5 pins the 7.x preset.
-      - dependency-name: "@babel/*"
-        update-types: [version-update:semver-major]
-
       # eslint-plugin-vue 10 requires ESLint 9+ and flat config. Move both together,
       # deliberately, not through an automated PR.
       - dependency-name: "eslint"

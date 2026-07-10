@@ -1,3 +1,4 @@
+import {vi} from 'vitest';
 import { flushPromises, shallowMount } from '@vue/test-utils';
 import RegisterForm from '@/components/RegisterForm.vue';
 import axiosInstance from '@/utils/axiosSetup';
@@ -5,9 +6,9 @@ import axiosInstance from '@/utils/axiosSetup';
 // RegisterForm posts through the configured axios instance, not the bare axios
 // module. Mocking 'axios' instead would leave axios.create() returning undefined
 // and axiosSetup.js would throw while wiring up its interceptors at import time.
-jest.mock('@/utils/axiosSetup', () => ({
+vi.mock('@/utils/axiosSetup', () => ({
     __esModule: true,
-    default: { post: jest.fn() }
+    default: { post: vi.fn() }
 }));
 
 describe('RegisterForm.vue', () => {
@@ -15,8 +16,8 @@ describe('RegisterForm.vue', () => {
 
     beforeEach(() => {
         localStorage.clear();
-        jest.clearAllMocks();
-        push = jest.fn();
+        vi.clearAllMocks();
+        push = vi.fn();
     });
 
     const mountForm = () => shallowMount(RegisterForm, {
@@ -44,7 +45,7 @@ describe('RegisterForm.vue', () => {
     });
 
     it('Does not navigate when registration is rejected', async () => {
-        jest.spyOn(window, 'alert').mockImplementation(() => {});
+        vi.spyOn(window, 'alert').mockImplementation(() => {});
         axiosInstance.post.mockRejectedValue({ response: { data: 'Username already taken' } });
 
         const wrapper = mountForm();

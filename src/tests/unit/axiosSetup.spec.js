@@ -1,19 +1,21 @@
+import {vi} from 'vitest';
+
 // axiosSetup.js registers its interceptors against the instance returned by
 // axios.create() at import time. Mocking axios lets us capture those handlers and
 // drive them directly, which is the only way to exercise the 401 refresh path
-// without a server.
-jest.mock('axios', () => {
+// without a server. vi.mock is hoisted above the imports below, exactly as jest.mock was.
+vi.mock('axios', () => {
     // The instance is callable: the response interceptor retries by invoking it.
-    const instance = jest.fn();
+    const instance = vi.fn();
     instance.interceptors = {
-        request: {use: jest.fn()},
-        response: {use: jest.fn()}
+        request: {use: vi.fn()},
+        response: {use: vi.fn()}
     };
     return {
         __esModule: true,
         default: {
-            create: jest.fn(() => instance),
-            post: jest.fn()
+            create: vi.fn(() => instance),
+            post: vi.fn()
         }
     };
 });
@@ -88,7 +90,7 @@ describe('utils/axiosSetup', () => {
             setRefreshToken('refresh-1');
             axios.post.mockRejectedValue(new Error('refresh failed'));
             axiosInstance.mockResolvedValue({status: 200});
-            jest.spyOn(console, 'error').mockImplementation(() => {
+            vi.spyOn(console, 'error').mockImplementation(() => {
             });
 
             await onResponseError()({response: {status: 401}, config: {headers: {}}});

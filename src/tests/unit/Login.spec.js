@@ -1,16 +1,17 @@
+import {vi} from 'vitest';
 import { flushPromises, shallowMount } from '@vue/test-utils';
 import LoginForm from '@/components/LoginForm.vue';
 import axios from 'axios';
 
-jest.mock('axios');
+vi.mock('axios');
 
 describe('LoginForm.vue', () => {
     let push;
 
     beforeEach(() => {
         localStorage.clear();
-        jest.clearAllMocks();
-        push = jest.fn();
+        vi.clearAllMocks();
+        push = vi.fn();
     });
 
     const mountForm = () => shallowMount(LoginForm, {
@@ -37,7 +38,7 @@ describe('LoginForm.vue', () => {
     });
 
     it('Does not store tokens or navigate when the credentials are rejected', async () => {
-        jest.spyOn(window, 'alert').mockImplementation(() => {});
+        vi.spyOn(window, 'alert').mockImplementation(() => {});
         axios.post.mockRejectedValue(new Error('Unauthorized'));
 
         const wrapper = mountForm();
