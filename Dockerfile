@@ -1,70 +1,46 @@
 # syntax=docker/dockerfile:1
 
-# Comments are provided throughout this file to help you get started.
-# If you need more help, visit the Dockerfile reference guide at
-# https://docs.docker.com/go/dockerfile-reference/
+# Two stages: build the bundle with Node, serve it with nginx.
+#
+# The previous version of this file was an unmodified `docker init` Node template. It
+# bind-mounted a yarn.lock that does not exist (this project uses npm), copied from
+# /usr/src/app/build when Vue CLI emits dist/, never copied nginx.conf, and ended in a
+# node:alpine stage whose CMD invoked an nginx that was not installed. It could not build,
+# and could not have run if it had.
 
-# Want to help us make this template better? Share your feedback here: https://forms.gle/ybq9Krt8jtBL3iCk7
-
-ARG NODE_VERSION=22.18.0
+ARG NODE_VERSION=22.20.0
+ARG NGINX_VERSION=1.29-alpine
 
 ################################################################################
-# Use node image for base image for all stages.
-FROM node:${NODE_VERSION}-alpine as base
+# Build the production bundle.
+FROM node:${NODE_VERSION}-alpine AS build
 
-# Set working directory for all build stages.
 WORKDIR /usr/src/app
 
-################################################################################
-# Create a stage for installing production dependecies.
-FROM base as deps
+# `npm ci` installs exactly the committed lockfile and fails if package.json and
+# package-lock.json disagree. Copy only the manifests first so this layer caches.
+COPY package.json package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm npm ci
 
-# Download dependencies as a separate step to take advantage of Docker's caching.
-# Leverage a cache mount to /root/.yarn to speed up subsequent builds.
-# Leverage bind mounts to package.json and yarn.lock to avoid having to copy them
-# into this layer.
-RUN --mount=type=bind,source=package.json,target=package.json \
-    --mount=type=bind,source=yarn.lock,target=yarn.lock \
-    --mount=type=cache,target=/root/.yarn \
-    yarn install --production --frozen-lockfile
-
-################################################################################
-# Create a stage for building the application.
-FROM deps as build
-
-# Download additional development dependencies before building, as some projects require
-# "devDependencies" to be installed to build. If you don't need this, remove this step.
-RUN --mount=type=bind,source=package.json,target=package.json \
-    --mount=type=bind,source=yarn.lock,target=yarn.lock \
-    --mount=type=cache,target=/root/.yarn \
-    yarn install --frozen-lockfile
-
-# Copy the rest of the source files into the image.
 COPY . .
-# Run the build script.
-RUN yarn run build
+
+# Vue CLI writes to dist/. The API base URL is baked into the bundle at build time, so it
+# must be supplied here rather than at runtime.
+ARG VUE_APP_API_URL
+ENV VUE_APP_API_URL=${VUE_APP_API_URL}
+RUN npm run build
 
 ################################################################################
-# Create a new stage to run the application with minimal runtime dependencies
-# where the necessary files are copied from the build stage.
-FROM base as final
+# Serve the static bundle. nginx:alpine already runs as a non-root worker.
+FROM nginx:${NGINX_VERSION} AS final
 
-# Use production node environment by default.
-ENV NODE_ENV production
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /usr/src/app/dist /usr/share/nginx/html
 
-# Run the application as a non-root user.
-USER node
+# nginx.conf listens on 80; docker-compose maps 8080:80.
+EXPOSE 80
 
-# Copy package.json so that package manager commands can be used.
-COPY package.json .
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
+    CMD wget -qO /dev/null http://localhost/ || exit 1
 
-# Copy the production dependencies from the deps stage and also
-# the built application from the build stage into the image.
-COPY --from=deps /usr/src/app/node_modules ./node_modules
-COPY --from=build /usr/src/app/build ./build
-
-# Expose the port that the application listens on.
-EXPOSE 8080
-
-# Run the application.
 CMD ["nginx", "-g", "daemon off;"]

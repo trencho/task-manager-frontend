@@ -1,0 +1,30 @@
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # One PR per week for the routine bumps, instead of five that each need a CI run.
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Vue CLI is unmaintained: 5.0.8 shipped in 2022 and 5.0.9 is the only release since.
+      # Dependabot's only "fix" for its frozen chain is a downgrade to 3.12.1, which breaks
+      # the build. These stay pinned until the project migrates to Vite.
+      - dependency-name: "@vue/cli-*"
+      # jest is held at 29 by @vue/vue3-jest@29.2.6, whose peer range is jest@29.x.
+      - dependency-name: "jest"
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
