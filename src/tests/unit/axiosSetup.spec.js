@@ -103,5 +103,22 @@ describe('utils/axiosSetup', () => {
             await expect(onResponseError()(error)).rejects.toBe(error);
             expect(axios.post).not.toHaveBeenCalled();
         });
+
+        // A network failure, a DNS error or a CORS rejection produces an error with no
+        // `response` at all. Reading error.response.status threw a TypeError, which
+        // replaced the real failure with a misleading one.
+        it('Rejects a network error, which carries no response', async () => {
+            const networkError = Object.assign(new Error('Network Error'), {config: {}});
+
+            await expect(onResponseError()(networkError)).rejects.toBe(networkError);
+            expect(axios.post).not.toHaveBeenCalled();
+        });
+
+        // axios rejects a cancelled request with no config either.
+        it('Rejects an error with neither response nor config', async () => {
+            const bare = new Error('cancelled');
+
+            await expect(onResponseError()(bare)).rejects.toBe(bare);
+        });
     });
 });

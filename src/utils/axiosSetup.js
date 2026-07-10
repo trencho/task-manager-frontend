@@ -30,7 +30,10 @@ axiosInstance.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
-        if (error.response.status === 401 && !originalRequest._retry) {
+        // A network failure, DNS error, CORS rejection or cancellation arrives with no
+        // `response`, and sometimes no `config`. Reading through them unguarded threw a
+        // TypeError that replaced the real failure.
+        if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
             originalRequest._retry = true;
             await refreshAccessToken();
             return axiosInstance(originalRequest);
