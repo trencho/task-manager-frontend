@@ -12,7 +12,7 @@ A single-page task manager. Register, sign in, and manage your own tasks. The cl
 | HTTP | axios, with a shared instance that attaches the JWT and refreshes it on `401` |
 | Build | Vite 8 |
 | Tests | Vitest 4 + `@vue/test-utils` 2 |
-| Lint | ESLint 8 + `eslint-plugin-vue` |
+| Lint | ESLint 10 (flat config) + `eslint-plugin-vue` |
 | Package manager | **npm** (`package-lock.json` is committed) |
 | Deploy | Docker → nginx |
 
@@ -63,7 +63,7 @@ See [`.env.example`](.env.example).
 | `npm run build` | Production bundle into `dist/` |
 | `npm run preview` | Serve the built bundle locally |
 | `npm run lint` | ESLint |
-| `npm test` | Vitest, 31 tests |
+| `npm test` | Vitest, 86 tests |
 | `npm run coverage` | Vitest + v8 coverage |
 
 CI runs `npm ci && npm run lint && npm test && npm run build` on every push and pull request.
@@ -84,12 +84,18 @@ src/
 │   ├── LoginForm.vue        posts /api/auth/login
 │   ├── RegisterForm.vue     posts /api/auth/signup
 │   ├── TaskList.vue         renders tasks, paginates, confirms deletes
-│   ├── TaskForm.vue         create/edit a task
+│   ├── TaskForm.vue         create/edit a task (title, description, due date, status, priority)
+│   ├── TaskFilters.vue      search, status/priority filters, due-before, and sort
+│   ├── ErrorBanner.vue      inline, accessible API-error region (replaced alert())
 │   └── LogoutButton.vue
+├── constants/
+│   ├── taskStatus.js        PENDING / IN_PROGRESS / COMPLETED
+│   └── taskPriority.js      LOW / MEDIUM / HIGH
 ├── utils/
 │   ├── auth.js              access_token / refresh_token in localStorage
-│   └── axiosSetup.js        axios instance: Bearer header + 401 refresh-and-retry
-└── tests/unit/              Jest specs
+│   ├── axiosSetup.js        axios instance: Bearer header + 401 refresh-and-retry
+│   └── errorMessage.js      maps an axios failure to display text for ErrorBanner
+└── tests/unit/              Vitest specs
 ```
 
 ### Routing
@@ -119,7 +125,7 @@ cannot recurse back into the refresh handler.
 | Sign in | `POST /api/auth/login` |
 | Refresh | `POST /api/auth/refresh-token` (returns a rotated refresh token) |
 | Sign out | `POST /api/auth/logout` (revokes the refresh token) |
-| List | `GET /api/tasks?page={n}&size=10` (paginated) |
+| List | `GET /api/tasks` — paginated (`page`, `size`), with optional `q`, `status`, `priority`, `dueBefore`, and `sort` from the filter bar |
 | Create | `POST /api/tasks` |
 | Update | `PUT /api/tasks/{id}` |
 | Delete | `DELETE /api/tasks/{id}` |
@@ -139,11 +145,12 @@ Candidate features, derived from this README and the gaps between it and the cod
 1. ~~**Set a task's status from the UI.**~~ Done. `TaskForm` has a status select bound to the
    backend's `TaskStatus`, and `TaskList` shows each task's status. "Mark tasks as complete" —
    claimed by an earlier version of this README, and impossible until now — works.
-2. **Sort by due date and status.** `TaskList` renders the due date as raw text and cannot sort.
-   The backend's `GET /api/tasks` already accepts `sort=dueDate,asc`.
-3. **Filter and search.** Depends on the matching backend feature.
-4. **Surface API errors properly.** Failures are reported with `alert()`. An inline error region
-   would be both accessible and testable.
+2. ~~**Sort tasks.**~~ Done. `TaskFilters` sorts by due date or title, ascending or descending,
+   passed to `GET /api/tasks` as `sort`.
+3. ~~**Filter and search.**~~ Done. `TaskFilters` sends `q` (title/description search), `status`,
+   `priority`, and `dueBefore`; the backend matches on all four, combinable with pagination.
+4. ~~**Surface API errors properly.**~~ Done. `ErrorBanner` shows failures in an inline, accessible
+   region and `alert()` is gone — see `utils/errorMessage.js`.
 5. **Introduce a store (Pinia)** *if* shared state grows beyond auth tokens. Not needed today —
    and an earlier version of this README claimed one existed when it did not.
 6. ~~**Log out server-side.**~~ Done. `LogoutButton` calls `POST /api/auth/logout`, which revokes
