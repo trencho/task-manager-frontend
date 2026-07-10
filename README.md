@@ -96,11 +96,13 @@ src/
 Every subsequent request goes through the axios instance in `utils/axiosSetup.js`, which:
 
 1. attaches `Authorization: Bearer <accessToken>`;
-2. on a `401`, calls `/api/auth/refresh-token` once, stores the new access token, and replays the
-   original request;
-3. clears both tokens if that refresh itself fails.
+2. on a `401`, calls `/api/auth/refresh-token` once, stores the **new access token and the
+   rotated refresh token**, and replays the original request;
+3. clears both tokens if that refresh itself fails, and does not replay the request.
 
-A request is only retried once — a second `401` for the same request rejects.
+A request is only retried once — a second `401` for the same request rejects. The refresh call
+goes through a separate axios client with no interceptors, so a `401` from `/refresh-token`
+cannot recurse back into the refresh handler.
 
 ### API used
 
@@ -108,7 +110,7 @@ A request is only retried once — a second `401` for the same request rejects.
 |---|---|
 | Register | `POST /api/auth/signup` |
 | Sign in | `POST /api/auth/login` |
-| Refresh | `POST /api/auth/refresh-token` |
+| Refresh | `POST /api/auth/refresh-token` (returns a rotated refresh token) |
 | Sign out | `POST /api/auth/logout` (revokes the refresh token) |
 | List | `GET /api/tasks?page={n}&size=10` (paginated) |
 | Create | `POST /api/tasks` |

@@ -1,13 +1,17 @@
 import axios from 'axios';
-import { getAccessToken, getRefreshToken, setAccessToken, clearTokens } from '@/utils/auth';
+import { getAccessToken, getRefreshToken, setAccessToken, setRefreshToken, clearTokens } from '@/utils/auth';
 
 // Unset means "same origin", so requests stay relative (`/api/...`) and the Vite dev-server
-// proxy forwards them. The old VUE_APP_API_URL was never read by any code: axios.create()
-// took no baseURL, so a built bundle called /api on nginx's own origin, where nothing
-// answers. Set VITE_API_URL at build time to point a deployed bundle at the API.
-const axiosInstance = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || ''
-});
+// proxy forwards them. Set VITE_API_URL at build time to point a deployed bundle at the API.
+const baseURL = import.meta.env.VITE_API_URL || '';
+
+const axiosInstance = axios.create({ baseURL });
+
+// A separate client for the refresh call. It shares the baseURL but carries no interceptors,
+// so a 401 from /refresh-token cannot recurse back into the refresh handler. Using the bare
+// `axios` module here instead would ignore baseURL entirely and send the refresh to a
+// different origin than every other request.
+const refreshClient = axios.create({ baseURL });
 
 axiosInstance.interceptors.request.use((config) => {
     const accessToken = getAccessToken();
@@ -19,16 +23,22 @@ axiosInstance.interceptors.request.use((config) => {
     return Promise.reject(error);
 });
 
+// The server rotates the refresh token: the presented one is invalidated and a new one comes
+// back with the access token. Both must be stored, or the next refresh presents a dead token.
 const refreshAccessToken = async () => {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) {
+        return false;
+    }
     try {
-        const refreshToken = getRefreshToken();
-        const response = await axios.post('/api/auth/refresh-token', {
-            refreshToken: refreshToken,
-        });
-        setAccessToken(response.data);
+        const { data } = await refreshClient.post('/api/auth/refresh-token', { refreshToken });
+        setAccessToken(data.accessToken);
+        setRefreshToken(data.refreshToken);
+        return true;
     } catch (error) {
         console.error('Failed to refresh access token:', error);
         clearTokens();
+        return false;
     }
 };
 
@@ -41,8 +51,11 @@ axiosInstance.interceptors.response.use(
         // TypeError that replaced the real failure.
         if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
             originalRequest._retry = true;
-            await refreshAccessToken();
-            return axiosInstance(originalRequest);
+            // Only replay the request if we actually hold a fresh token. Retrying after a
+            // failed refresh just sends the same expired credentials again.
+            if (await refreshAccessToken()) {
+                return axiosInstance(originalRequest);
+            }
         }
         return Promise.reject(error);
     }
