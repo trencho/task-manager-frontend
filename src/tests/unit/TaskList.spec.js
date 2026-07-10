@@ -2,8 +2,8 @@ import {shallowMount} from '@vue/test-utils';
 import TaskList from '@/components/TaskList.vue';
 
 const tasks = [
-    {id: '1', title: 'First', description: 'desc one', dueDate: '2026-01-01'},
-    {id: '2', title: 'Second', description: 'desc two', dueDate: '2026-02-01'}
+    {id: '1', title: 'First', description: 'desc one', dueDate: '2026-01-01', status: 'PENDING'},
+    {id: '2', title: 'Second', description: 'desc two', dueDate: '2026-02-01', status: 'COMPLETED'}
 ];
 
 const mountList = (props = {}) => shallowMount(TaskList, {
@@ -17,6 +17,18 @@ describe('TaskList.vue', () => {
 
     it('Renders one row per task', () => {
         expect(mountList().findAll('.task-item')).toHaveLength(2);
+    });
+
+    it('Shows each task\'s status as a human label', () => {
+        const labels = mountList().findAll('.task-status').map((s) => s.text());
+
+        expect(labels).toEqual(['Pending', 'Completed']);
+    });
+
+    it('Falls back to the raw value for an unknown status', () => {
+        const wrapper = mountList({tasks: [{...tasks[0], status: 'ARCHIVED'}]});
+
+        expect(wrapper.find('.task-status').text()).toBe('ARCHIVED');
     });
 
     it('Shows a placeholder and no pagination when there are no tasks', () => {

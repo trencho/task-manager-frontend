@@ -121,12 +121,11 @@ Builds the bundle and serves it through nginx (`nginx.conf`). See [`README.Docke
 
 Candidate features, derived from this README and the gaps between it and the code:
 
-1. **Set a task's status from the UI.** The backend has `PENDING`, `IN_PROGRESS`, `COMPLETED`, and
-   `PUT /api/tasks/{id}` accepts a `status`. `TaskForm.vue` only edits title, description and due
-   date, so a task can never leave `PENDING`. An earlier version of this README advertised "mark
-   tasks as complete" — this is the feature that would make that true.
-2. **Show and sort by due date and status.** `TaskList` renders the due date as raw text and cannot
-   sort. The backend's `GET /api/tasks` already accepts `sort=dueDate,asc`.
+1. ~~**Set a task's status from the UI.**~~ Done. `TaskForm` has a status select bound to the
+   backend's `TaskStatus`, and `TaskList` shows each task's status. "Mark tasks as complete" —
+   claimed by an earlier version of this README, and impossible until now — works.
+2. **Sort by due date and status.** `TaskList` renders the due date as raw text and cannot sort.
+   The backend's `GET /api/tasks` already accepts `sort=dueDate,asc`.
 3. **Filter and search.** Depends on the matching backend feature.
 4. **Surface API errors properly.** Failures are reported with `alert()`. An inline error region
    would be both accessible and testable.

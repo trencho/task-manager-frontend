@@ -23,6 +23,9 @@ import axiosInstance from '@/utils/axiosSetup';
 import TaskForm from '@/components/TaskForm.vue';
 import TaskList from '@/components/TaskList.vue';
 import LogoutButton from '@/components/LogoutButton.vue';
+import { DEFAULT_TASK_STATUS } from '@/constants/taskStatus';
+
+const emptyTask = () => ({ title: '', description: '', dueDate: '', status: DEFAULT_TASK_STATUS });
 
 export default {
   components: {
@@ -33,9 +36,12 @@ export default {
   data() {
     return {
       tasks: [],
-      currentTask: { title: '', description: '' },
+      currentTask: { ...emptyTask() },
       isEditing: false,
-      page: 1
+      page: 0,
+      // Was assigned in fetchTasks but never declared, so it was not reactive and
+      // TaskList rendered with `totalPages` undefined on first paint.
+      totalPages: 0
     };
   },
   mounted() {
@@ -90,7 +96,7 @@ export default {
       this.isEditing = true;
     },
     resetForm() {
-      this.currentTask = { title: '', description: '' };
+      this.currentTask = { ...emptyTask() };
       this.isEditing = false;
     }
   }

@@ -7,6 +7,7 @@
         class="task-item task-actions"
       >
         <strong class="task-title">{{ task.title }}</strong>: {{ task.description }} - <em>Due: {{ task.dueDate }}</em>
+        <span class="task-status">{{ statusLabel(task.status) }}</span>
         <button
           class="edit"
           @click="editTask(task)"
@@ -44,6 +45,8 @@
 </template>
 
 <script>
+import { statusLabel } from '@/constants/taskStatus';
+
 export default {
   props: {
     tasks: {
@@ -61,6 +64,7 @@ export default {
   },
   emits: ['edit-task', 'delete-task', 'change-page'],
   methods: {
+    statusLabel,
     editTask(task) {
       this.$emit('edit-task', task);
     },

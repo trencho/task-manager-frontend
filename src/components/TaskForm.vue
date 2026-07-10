@@ -18,6 +18,21 @@
         type="date"
       >
     </div>
+    <div>
+      <label for="task-status">Status:</label>
+      <select
+        id="task-status"
+        v-model="task.status"
+      >
+        <option
+          v-for="option in statuses"
+          :key="option.value"
+          :value="option.value"
+        >
+          {{ option.label }}
+        </option>
+      </select>
+    </div>
     <button type="submit">
       {{ isEditing ? 'Update' : 'Create' }} Task
     </button>
@@ -25,6 +40,8 @@
 </template>
 
 <script>
+import { TASK_STATUSES } from '@/constants/taskStatus';
+
 export default {
   props: {
     task: {
@@ -37,6 +54,11 @@ export default {
     }
   },
   emits: ['submit-task'],
+  data() {
+    return {
+      statuses: TASK_STATUSES
+    };
+  },
   methods: {
     submitTask() {
       this.$emit('submit-task', this.task);
