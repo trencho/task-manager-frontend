@@ -34,6 +34,10 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # vue-tsc is the type gate; Vite/Vitest transpile TS but do not type-check it.
+      - name: Type-check
+        run: npm run type-check
+
       # This suite once silently ran ZERO tests for months: jest resolved
       # testEnvironment 'jsdom' to a jest-environment-jsdom major that its constructor
       # could not load, every suite failed to load, and nobody ran it. Jest exits
