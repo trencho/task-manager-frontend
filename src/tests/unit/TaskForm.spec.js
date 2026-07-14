@@ -35,6 +35,24 @@ describe('TaskForm.vue', () => {
         expect(submitted.title).toBe('Write tests');
     });
 
+    // Drives every remaining field through its v-model, so the title/description/due-date/priority
+    // bindings are exercised the way a user fills the form, not reached past with props.
+    it('Emits the values typed into every field', async () => {
+        const wrapper = mountForm({ status: 'PENDING' }, false);
+
+        await wrapper.find('input').setValue('Buy milk');
+        await wrapper.find('textarea').setValue('2 percent');
+        await wrapper.find('input[type="date"]').setValue('2026-08-01');
+        await wrapper.find('#task-priority').setValue('HIGH');
+        await wrapper.find('form').trigger('submit');
+
+        const [[submitted]] = wrapper.emitted('submit-task');
+        expect(submitted.title).toBe('Buy milk');
+        expect(submitted.description).toBe('2 percent');
+        expect(submitted.dueDate).toBe('2026-08-01');
+        expect(submitted.priority).toBe('HIGH');
+    });
+
     it('Labels the button by mode', () => {
         expect(mountForm({}, false).find('button').text()).toContain('Create');
         expect(mountForm({}, true).find('button').text()).toContain('Update');

@@ -45,6 +45,26 @@ describe('LoginForm.vue', () => {
         expect(wrapper.find('[role="alert"]').exists()).toBe(false);
     });
 
+    // setValue drives the inputs the way a user does, exercising the v-model bindings themselves
+    // rather than reaching past them with setData.
+    it('Posts the username and password typed into the fields', async () => {
+        axiosInstance.post.mockResolvedValue({
+            data: { accessToken: 'a', refreshToken: 'r' }
+        });
+
+        const wrapper = mountForm();
+        const [username, password] = wrapper.findAll('input');
+        await username.setValue('typed-user');
+        await password.setValue('typed-pass');
+        await wrapper.find('form').trigger('submit');
+        await flushPromises();
+
+        expect(axiosInstance.post).toHaveBeenCalledWith('/api/auth/login', {
+            username: 'typed-user',
+            password: 'typed-pass'
+        });
+    });
+
     it('Shows the server message and does not store tokens when the credentials are rejected', async () => {
         axiosInstance.post.mockRejectedValue({ response: { data: 'Invalid credentials' } });
 

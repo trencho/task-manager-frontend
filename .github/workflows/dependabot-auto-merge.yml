@@ -1,0 +1,33 @@
+# Lands patch + minor Dependabot PRs automatically once CI is green; majors fall through and
+# stay open for review. See .github/dependabot.yml for what gets proposed (minor+patch grouped;
+# eslint / eslint-plugin-vue majors are deliberately held).
+#
+# INERT until two repo settings are on (this workflow cannot set them itself):
+#   1. Settings -> General -> Pull Requests -> "Allow auto-merge".
+#   2. Branch protection on `master` with the CI check "lint + test + build" REQUIRED.
+#      Without a required check, `gh pr merge --auto` merges immediately, defeating the gate.
+#   A red REQUIRED check blocks every auto-merge.
+name: Dependabot auto-merge
+
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: ${{ github.actor == 'dependabot[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@v2
+
+      # Patch + minor only. Majors are excluded here and by dependabot.yml, so they stay manual.
+      - name: Enable auto-merge for patch/minor
+        if: ${{ steps.meta.outputs.update-type == 'version-update:semver-patch' || steps.meta.outputs.update-type == 'version-update:semver-minor' }}
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

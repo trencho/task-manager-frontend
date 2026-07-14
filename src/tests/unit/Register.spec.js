@@ -47,6 +47,27 @@ describe('RegisterForm.vue', () => {
         expect(wrapper.find('[role="alert"]').exists()).toBe(false);
     });
 
+    // setValue drives the inputs the way a user does, exercising the v-model bindings themselves
+    // rather than reaching past them with setData.
+    it('Posts the values typed into the fields', async () => {
+        axiosInstance.post.mockResolvedValue({ data: 'User registered successfully!' });
+
+        const wrapper = mountForm();
+        const [username, email, password] = wrapper.findAll('input');
+        await username.setValue('typed-user');
+        await email.setValue('typed@mail.com');
+        await password.setValue('typed-pass');
+        await wrapper.find('form').trigger('submit');
+        await flushPromises();
+
+        expect(axiosInstance.post).toHaveBeenCalledWith('/api/auth/signup', {
+            username: 'typed-user',
+            email: 'typed@mail.com',
+            password: 'typed-pass'
+        });
+        expect(push).toHaveBeenCalledWith('/login');
+    });
+
     it('Shows the server message and does not navigate when registration is rejected', async () => {
         axiosInstance.post.mockRejectedValue({ response: { data: 'Username already taken' } });
 
