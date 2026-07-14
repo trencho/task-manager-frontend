@@ -26,7 +26,8 @@
 <script>
 import axiosInstance from '@/utils/axiosSetup';
 import ErrorBanner from '@/components/ErrorBanner.vue';
-import TaskFilters, { emptyFilters } from '@/components/TaskFilters.vue';
+import TaskFilters from '@/components/TaskFilters.vue';
+import { emptyFilters } from '@/constants/taskFilters';
 import TaskForm from '@/components/TaskForm.vue';
 import TaskList from '@/components/TaskList.vue';
 import LogoutButton from '@/components/LogoutButton.vue';

@@ -1,15 +1,17 @@
-import {vi} from 'vitest';
-import {shallowMount} from '@vue/test-utils';
+import { vi } from 'vitest';
+import { shallowMount } from '@vue/test-utils';
 import TaskList from '@/components/TaskList.vue';
+import type { Task } from '@/types';
 
-const tasks = [
-    {id: '1', title: 'First', description: 'desc one', dueDate: '2026-01-01', status: 'PENDING'},
-    {id: '2', title: 'Second', description: 'desc two', dueDate: '2026-02-01', status: 'COMPLETED'}
+const tasks: Task[] = [
+    {id: '1', title: 'First', description: 'desc one', dueDate: '2026-01-01', status: 'PENDING', priority: 'LOW'},
+    {id: '2', title: 'Second', description: 'desc two', dueDate: '2026-02-01', status: 'COMPLETED', priority: 'HIGH'}
 ];
 
-const mountList = (props = {}) => shallowMount(TaskList, {
-    props: {tasks, page: 0, totalPages: 2, ...props}
-});
+const mountList = (props: Partial<{ tasks: Task[]; page: number; totalPages: number }> = {}) =>
+    shallowMount(TaskList, {
+        props: {tasks, page: 0, totalPages: 2, ...props}
+    });
 
 describe('TaskList.vue', () => {
     afterEach(() => {
@@ -27,7 +29,8 @@ describe('TaskList.vue', () => {
     });
 
     it('Falls back to the raw value for an unknown status', () => {
-        const wrapper = mountList({tasks: [{...tasks[0], status: 'ARCHIVED'}]});
+        // Deliberately an invalid status to exercise the statusLabel fallback.
+        const wrapper = mountList({tasks: [{...tasks[0], status: 'ARCHIVED'}] as unknown as Task[]});
 
         expect(wrapper.find('.task-status').text()).toBe('ARCHIVED');
     });
@@ -43,7 +46,7 @@ describe('TaskList.vue', () => {
         const wrapper = mountList();
         await wrapper.findAll('button.edit')[1].trigger('click');
 
-        expect(wrapper.emitted('edit-task')[0]).toEqual([tasks[1]]);
+        expect(wrapper.emitted('edit-task')![0]).toEqual([tasks[1]]);
     });
 
     it('Emits delete-task only after the user confirms', async () => {
@@ -52,7 +55,7 @@ describe('TaskList.vue', () => {
 
         await wrapper.findAll('.task-item')[0].findAll('button')[1].trigger('click');
 
-        expect(wrapper.emitted('delete-task')[0]).toEqual(['1']);
+        expect(wrapper.emitted('delete-task')![0]).toEqual(['1']);
     });
 
     it('Does not emit delete-task when the user cancels', async () => {
@@ -80,7 +83,7 @@ describe('TaskList.vue', () => {
         await previous.trigger('click');
         await next.trigger('click');
 
-        expect(wrapper.emitted('change-page')[0]).toEqual([0]);
-        expect(wrapper.emitted('change-page')[1]).toEqual([2]);
+        expect(wrapper.emitted('change-page')![0]).toEqual([0]);
+        expect(wrapper.emitted('change-page')![1]).toEqual([2]);
     });
 });

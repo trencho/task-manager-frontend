@@ -45,44 +45,39 @@
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
 import { priorityLabel } from '@/constants/taskPriority';
 import { statusLabel } from '@/constants/taskStatus';
+import type { Task } from '@/types';
 
-export default {
-  props: {
-    tasks: {
-      type: Array,
-      required: true
-    },
-    page: {
-      type: Number,
-      required: true
-    },
-    totalPages: {
-      type: Number,
-      required: true
-    }
-  },
-  emits: ['edit-task', 'delete-task', 'change-page'],
-  methods: {
-    statusLabel,
-    priorityLabel,
-    editTask(task) {
-      this.$emit('edit-task', task);
-    },
-    deleteTask(id) {
-      const confirmation = window.confirm('Are you sure you want to delete this task?');
-      if (confirmation) {
-        this.$emit('delete-task', id);
-      }
-    },
-    nextPage() {
-      this.$emit('change-page', this.page + 1);
-    },
-    previousPage() {
-      this.$emit('change-page', this.page - 1);
-    }
+const props = defineProps<{
+  tasks: Task[];
+  page: number;
+  totalPages: number;
+}>();
+
+const emit = defineEmits<{
+  'edit-task': [task: Task];
+  'delete-task': [id: string];
+  'change-page': [page: number];
+}>();
+
+const editTask = (task: Task): void => {
+  emit('edit-task', task);
+};
+
+const deleteTask = (id: string): void => {
+  const confirmation = window.confirm('Are you sure you want to delete this task?');
+  if (confirmation) {
+    emit('delete-task', id);
   }
+};
+
+const nextPage = (): void => {
+  emit('change-page', props.page + 1);
+};
+
+const previousPage = (): void => {
+  emit('change-page', props.page - 1);
 };
 </script>
