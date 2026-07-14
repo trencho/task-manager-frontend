@@ -5,12 +5,6 @@
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
 import LoginForm from '@/components/LoginForm.vue';
-
-export default {
-  components: {
-    LoginForm
-  }
-};
 </script>

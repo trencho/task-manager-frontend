@@ -4,10 +4,7 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: 'App'
-};
+<script setup lang="ts">
 </script>
 
 <style src="./assets/style.css"></style>
