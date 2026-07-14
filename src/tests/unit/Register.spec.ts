@@ -1,44 +1,42 @@
-import {vi} from 'vitest';
+import { vi, type Mock } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
-import RegisterForm from '@/components/RegisterForm.vue';
-import axiosInstance from '@/utils/axiosSetup';
 
-// RegisterForm posts through the configured axios instance, not the bare axios
-// module. Mocking 'axios' instead would leave axios.create() returning undefined
-// and axiosSetup.js would throw while wiring up its interceptors at import time.
+const push = vi.fn();
+vi.mock('vue-router', () => ({ useRouter: () => ({ push }) }));
+
+// RegisterForm posts through the configured axios instance, not the bare axios module.
 vi.mock('@/utils/axiosSetup', () => ({
     __esModule: true,
     default: { post: vi.fn() }
 }));
 
-describe('RegisterForm.vue', () => {
-    let push;
+import RegisterForm from '@/components/RegisterForm.vue';
+import axiosInstance from '@/utils/axiosSetup';
 
+const post = axiosInstance.post as unknown as Mock;
+
+describe('RegisterForm.vue', () => {
     beforeEach(() => {
         localStorage.clear();
         vi.clearAllMocks();
-        push = vi.fn();
     });
 
     // mount, not shallowMount: shallowMount stubs ErrorBanner, so a banner rendering nothing
     // would still satisfy these assertions.
-    const mountForm = () => mount(RegisterForm, {
-        global: { mocks: { $router: { push } } }
-    });
+    const mountForm = () => mount(RegisterForm);
 
     it('Registers a user successfully', async () => {
-        axiosInstance.post.mockResolvedValue({ data: 'User registered successfully!' });
+        post.mockResolvedValue({ data: 'User registered successfully!' });
 
         const wrapper = mountForm();
-        await wrapper.setData({
-            username: 'testuser',
-            email: 'testuser@mail.com',
-            password: 'password123'
-        });
+        const [username, email, password] = wrapper.findAll('input');
+        await username.setValue('testuser');
+        await email.setValue('testuser@mail.com');
+        await password.setValue('password123');
         await wrapper.find('form').trigger('submit');
         await flushPromises();
 
-        expect(axiosInstance.post).toHaveBeenCalledWith('/api/auth/signup', {
+        expect(post).toHaveBeenCalledWith('/api/auth/signup', {
             username: 'testuser',
             email: 'testuser@mail.com',
             password: 'password123'
@@ -47,10 +45,8 @@ describe('RegisterForm.vue', () => {
         expect(wrapper.find('[role="alert"]').exists()).toBe(false);
     });
 
-    // setValue drives the inputs the way a user does, exercising the v-model bindings themselves
-    // rather than reaching past them with setData.
     it('Posts the values typed into the fields', async () => {
-        axiosInstance.post.mockResolvedValue({ data: 'User registered successfully!' });
+        post.mockResolvedValue({ data: 'User registered successfully!' });
 
         const wrapper = mountForm();
         const [username, email, password] = wrapper.findAll('input');
@@ -60,7 +56,7 @@ describe('RegisterForm.vue', () => {
         await wrapper.find('form').trigger('submit');
         await flushPromises();
 
-        expect(axiosInstance.post).toHaveBeenCalledWith('/api/auth/signup', {
+        expect(post).toHaveBeenCalledWith('/api/auth/signup', {
             username: 'typed-user',
             email: 'typed@mail.com',
             password: 'typed-pass'
@@ -69,7 +65,7 @@ describe('RegisterForm.vue', () => {
     });
 
     it('Shows the server message and does not navigate when registration is rejected', async () => {
-        axiosInstance.post.mockRejectedValue({ response: { data: 'Username already taken' } });
+        post.mockRejectedValue({ response: { data: 'Username already taken' } });
 
         const wrapper = mountForm();
         await wrapper.find('form').trigger('submit');
@@ -80,7 +76,7 @@ describe('RegisterForm.vue', () => {
     });
 
     it('Joins the validation failures the backend returns as an array', async () => {
-        axiosInstance.post.mockRejectedValue({
+        post.mockRejectedValue({
             response: { data: ['email: Email is required', 'password: too short'] }
         });
 
@@ -98,7 +94,7 @@ describe('RegisterForm.vue', () => {
      * `response`, so the catch block threw a TypeError of its own and the user saw nothing.
      */
     it('Renders a message rather than crashing when the request never reached the server', async () => {
-        axiosInstance.post.mockRejectedValue(new Error('Network Error'));
+        post.mockRejectedValue(new Error('Network Error'));
 
         const wrapper = mountForm();
         await wrapper.find('form').trigger('submit');

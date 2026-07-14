@@ -26,38 +26,34 @@
   </form>
 </template>
 
-<script>
+<script setup lang="ts">
 // The shared instance, not bare axios: only it carries the configured baseURL, so a bundle built
 // with VITE_API_URL was posting to the wrong origin from this form alone.
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import ErrorBanner from '@/components/ErrorBanner.vue';
 import { setAccessToken, setRefreshToken } from '@/utils/auth';
 import axiosInstance from '@/utils/axiosSetup';
 import { apiErrorMessage } from '@/utils/errorMessage';
+import type { AuthTokens } from '@/types';
 
-export default {
-  components: { ErrorBanner },
-  data() {
-    return {
-      username: '',
-      password: '',
-      error: ''
-    };
-  },
-  methods: {
-    async login() {
-      this.error = '';
-      try {
-        const response = await axiosInstance.post('/api/auth/login', {
-          username: this.username,
-          password: this.password
-        });
-        setAccessToken(response.data.accessToken);
-        setRefreshToken(response.data.refreshToken);
-        this.$router.push('/tasks');
-      } catch (error) {
-        this.error = apiErrorMessage(error);
-      }
-    }
+const router = useRouter();
+const username = ref('');
+const password = ref('');
+const error = ref('');
+
+const login = async (): Promise<void> => {
+  error.value = '';
+  try {
+    const response = await axiosInstance.post<AuthTokens>('/api/auth/login', {
+      username: username.value,
+      password: password.value
+    });
+    setAccessToken(response.data.accessToken);
+    setRefreshToken(response.data.refreshToken);
+    router.push('/tasks');
+  } catch (err) {
+    error.value = apiErrorMessage(err);
   }
 };
 </script>

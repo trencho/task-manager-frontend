@@ -1,5 +1,9 @@
-import {vi} from 'vitest';
+import { vi, type Mock } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
+
+// The component calls useRouter() now, so mock the composable rather than injecting $router.
+const push = vi.fn();
+vi.mock('vue-router', () => ({ useRouter: () => ({ push }) }));
 
 // The form posts through the shared instance, not bare axios: only that instance carries the
 // configured baseURL.
@@ -10,32 +14,35 @@ vi.mock('@/utils/axiosSetup', () => ({
 import LoginForm from '@/components/LoginForm.vue';
 import axiosInstance from '@/utils/axiosSetup';
 
-describe('LoginForm.vue', () => {
-    let push;
+const post = axiosInstance.post as unknown as Mock;
 
+describe('LoginForm.vue', () => {
     beforeEach(() => {
         localStorage.clear();
         vi.clearAllMocks();
-        push = vi.fn();
     });
 
     // mount, not shallowMount: shallowMount stubs ErrorBanner and the message never renders,
     // so the assertions below would pass against a banner that displays nothing.
-    const mountForm = () => mount(LoginForm, {
-        global: { mocks: { $router: { push } } }
-    });
+    const mountForm = () => mount(LoginForm);
+
+    const setCredentials = async (wrapper: ReturnType<typeof mountForm>, username: string, password: string) => {
+        const [usernameInput, passwordInput] = wrapper.findAll('input');
+        await usernameInput.setValue(username);
+        await passwordInput.setValue(password);
+    };
 
     it('Logs in a user successfully', async () => {
-        axiosInstance.post.mockResolvedValue({
+        post.mockResolvedValue({
             data: { accessToken: 'mockAccessToken', refreshToken: 'mockRefreshToken' }
         });
 
         const wrapper = mountForm();
-        await wrapper.setData({ username: 'testuser', password: 'password123' });
+        await setCredentials(wrapper, 'testuser', 'password123');
         await wrapper.find('form').trigger('submit');
         await flushPromises();
 
-        expect(axiosInstance.post).toHaveBeenCalledWith('/api/auth/login', {
+        expect(post).toHaveBeenCalledWith('/api/auth/login', {
             username: 'testuser',
             password: 'password123'
         });
@@ -45,12 +52,9 @@ describe('LoginForm.vue', () => {
         expect(wrapper.find('[role="alert"]').exists()).toBe(false);
     });
 
-    // setValue drives the inputs the way a user does, exercising the v-model bindings themselves
-    // rather than reaching past them with setData.
+    // setValue drives the inputs the way a user does, exercising the v-model bindings themselves.
     it('Posts the username and password typed into the fields', async () => {
-        axiosInstance.post.mockResolvedValue({
-            data: { accessToken: 'a', refreshToken: 'r' }
-        });
+        post.mockResolvedValue({ data: { accessToken: 'a', refreshToken: 'r' } });
 
         const wrapper = mountForm();
         const [username, password] = wrapper.findAll('input');
@@ -59,17 +63,17 @@ describe('LoginForm.vue', () => {
         await wrapper.find('form').trigger('submit');
         await flushPromises();
 
-        expect(axiosInstance.post).toHaveBeenCalledWith('/api/auth/login', {
+        expect(post).toHaveBeenCalledWith('/api/auth/login', {
             username: 'typed-user',
             password: 'typed-pass'
         });
     });
 
     it('Shows the server message and does not store tokens when the credentials are rejected', async () => {
-        axiosInstance.post.mockRejectedValue({ response: { data: 'Invalid credentials' } });
+        post.mockRejectedValue({ response: { data: 'Invalid credentials' } });
 
         const wrapper = mountForm();
-        await wrapper.setData({ username: 'testuser', password: 'wrong' });
+        await setCredentials(wrapper, 'testuser', 'wrong');
         await wrapper.find('form').trigger('submit');
         await flushPromises();
 
@@ -80,10 +84,10 @@ describe('LoginForm.vue', () => {
 
     it('Renders a message rather than crashing when the request never reached the server', async () => {
         // No `response` property at all -- the shape axios rejects with on a network failure.
-        axiosInstance.post.mockRejectedValue(new Error('Network Error'));
+        post.mockRejectedValue(new Error('Network Error'));
 
         const wrapper = mountForm();
-        await wrapper.setData({ username: 'testuser', password: 'password123' });
+        await setCredentials(wrapper, 'testuser', 'password123');
         await wrapper.find('form').trigger('submit');
         await flushPromises();
 
@@ -92,7 +96,7 @@ describe('LoginForm.vue', () => {
     });
 
     it('Dismisses the banner', async () => {
-        axiosInstance.post.mockRejectedValue({ response: { data: 'Invalid credentials' } });
+        post.mockRejectedValue({ response: { data: 'Invalid credentials' } });
 
         const wrapper = mountForm();
         await wrapper.find('form').trigger('submit');
@@ -104,14 +108,14 @@ describe('LoginForm.vue', () => {
     });
 
     it('Clears a previous error when the form is resubmitted successfully', async () => {
-        axiosInstance.post.mockRejectedValueOnce({ response: { data: 'Invalid credentials' } });
+        post.mockRejectedValueOnce({ response: { data: 'Invalid credentials' } });
 
         const wrapper = mountForm();
         await wrapper.find('form').trigger('submit');
         await flushPromises();
         expect(wrapper.find('[role="alert"]').exists()).toBe(true);
 
-        axiosInstance.post.mockResolvedValueOnce({
+        post.mockResolvedValueOnce({
             data: { accessToken: 'a', refreshToken: 'r' }
         });
         await wrapper.find('form').trigger('submit');

@@ -54,32 +54,23 @@
   </form>
 </template>
 
-<script>
+<script setup lang="ts">
 import { TASK_PRIORITIES } from '@/constants/taskPriority';
 import { TASK_STATUSES } from '@/constants/taskStatus';
+import type { NewTask, Task } from '@/types';
 
-export default {
-  props: {
-    task: {
-      type: Object,
-      required: true
-    },
-    isEditing: {
-      type: Boolean,
-      default: false
-    }
-  },
-  emits: ['submit-task'],
-  data() {
-    return {
-      statuses: TASK_STATUSES,
-      priorities: TASK_PRIORITIES
-    };
-  },
-  methods: {
-    submitTask() {
-      this.$emit('submit-task', this.task);
-    }
-  }
+// The parent owns the task object; this form edits it in place and emits it back on submit.
+const props = withDefaults(defineProps<{
+  task: NewTask | Task;
+  isEditing?: boolean;
+}>(), { isEditing: false });
+
+const emit = defineEmits<{ 'submit-task': [task: NewTask | Task] }>();
+
+const statuses = TASK_STATUSES;
+const priorities = TASK_PRIORITIES;
+
+const submitTask = (): void => {
+  emit('submit-task', props.task);
 };
 </script>

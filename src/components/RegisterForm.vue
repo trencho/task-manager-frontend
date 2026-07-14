@@ -34,37 +34,32 @@
   </form>
 </template>
 
-<script>
+<script setup lang="ts">
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import ErrorBanner from '@/components/ErrorBanner.vue';
 import axiosInstance from '@/utils/axiosSetup';
 import { apiErrorMessage } from '@/utils/errorMessage';
 
-export default {
-  components: { ErrorBanner },
-  data() {
-    return {
-      username: '',
-      email: '',
-      password: '',
-      error: ''
-    };
-  },
-  methods: {
-    async register() {
-      this.error = '';
-      try {
-        await axiosInstance.post('/api/auth/signup', {
-          username: this.username,
-          email: this.email,
-          password: this.password
-        });
-        this.$router.push('/login');
-      } catch (error) {
-        // Was `error.response.data`, which threw a TypeError of its own whenever the request
-        // never reached the server.
-        this.error = apiErrorMessage(error);
-      }
-    }
+const router = useRouter();
+const username = ref('');
+const email = ref('');
+const password = ref('');
+const error = ref('');
+
+const register = async (): Promise<void> => {
+  error.value = '';
+  try {
+    await axiosInstance.post('/api/auth/signup', {
+      username: username.value,
+      email: email.value,
+      password: password.value
+    });
+    router.push('/login');
+  } catch (err) {
+    // Was `error.response.data`, which threw a TypeError of its own whenever the request
+    // never reached the server.
+    error.value = apiErrorMessage(err);
   }
 };
 </script>
