@@ -40,7 +40,7 @@ export default [
   {
     // Vitest injects these because `globals: true` is set in vite.config.ts. They were hand-listed
     // before; `globals.vitest` keeps the two in step.
-    files: ['src/tests/**/*.spec.{js,ts}'],
+    files: ['src/tests/**/*.spec.ts'],
     languageOptions: {
       globals: globals.vitest,
     },

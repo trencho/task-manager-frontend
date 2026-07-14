@@ -40,11 +40,11 @@ export default defineConfig({
     test: {
         environment: 'jsdom',
         globals: true,
-        include: ['src/tests/**/*.spec.{js,ts}'],
+        include: ['src/tests/**/*.spec.ts'],
         coverage: {
             provider: 'v8',
-            include: ['src/**/*.{js,ts,vue}'],
-            exclude: ['src/tests/**', 'src/main.{js,ts}', 'src/env.d.ts']
+            include: ['src/**/*.{ts,vue}'],
+            exclude: ['src/tests/**', 'src/main.ts', 'src/env.d.ts', 'src/types.ts']
         }
     }
 });

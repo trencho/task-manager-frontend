@@ -21,7 +21,8 @@ describe('constants/taskStatus', () => {
 
     it('Falls back to the raw value for an unknown status', () => {
         expect(statusLabel('ARCHIVED')).toBe('ARCHIVED');
-        expect(statusLabel(undefined)).toBeUndefined();
+        // Deliberately passing a non-string to prove the label helper never throws.
+        expect(statusLabel(undefined as unknown as string)).toBeUndefined();
     });
 });
 
@@ -40,6 +41,6 @@ describe('constants/taskPriority', () => {
 
     it('Falls back to the raw value for an unknown priority', () => {
         expect(priorityLabel('URGENT')).toBe('URGENT');
-        expect(priorityLabel(undefined)).toBeUndefined();
+        expect(priorityLabel(undefined as unknown as string)).toBeUndefined();
     });
 });

@@ -6,8 +6,7 @@
     "paths": {
       "@/*": ["./src/*"]
     },
-    "types": ["vitest/globals"],
-    "allowJs": true
+    "types": ["vitest/globals"]
   },
-  "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.vue", "src/env.d.ts"]
+  "include": ["src/**/*.ts", "src/**/*.vue", "src/env.d.ts"]
 }

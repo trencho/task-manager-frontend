@@ -1,4 +1,4 @@
-import {vi} from 'vitest';
+import { vi } from 'vitest';
 
 // The router imports TaskManagerView, which imports the axios instance at module load.
 vi.mock('@/utils/axiosSetup', () => ({
@@ -20,7 +20,7 @@ describe('router', () => {
 
     // vue-router treats a push to the route it is already on as a duplicate and skips the guards
     // entirely, so every test below starts somewhere other than its destination.
-    const startAt = async (path) => {
+    const startAt = async (path: string) => {
         await router.replace(path);
         expect(router.currentRoute.value.path).toBe(path);
     };
