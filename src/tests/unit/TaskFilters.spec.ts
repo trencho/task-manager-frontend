@@ -1,5 +1,7 @@
 import { mount } from '@vue/test-utils';
-import TaskFilters, { emptyFilters } from '@/components/TaskFilters.vue';
+import TaskFilters from '@/components/TaskFilters.vue';
+import { emptyFilters } from '@/constants/taskFilters';
+import type { Filters } from '@/types';
 
 describe('components/TaskFilters.vue', () => {
     const mountFilters = () => mount(TaskFilters);
@@ -21,7 +23,7 @@ describe('components/TaskFilters.vue', () => {
 
     it('Lists every status and priority the backend accepts', () => {
         const wrapper = mountFilters();
-        const values = (selector) => wrapper.find(selector).findAll('option')
+        const values = (selector: string) => wrapper.find(selector).findAll('option')
             .map((o) => o.attributes('value'))
             .filter(Boolean);
 
@@ -53,7 +55,7 @@ describe('components/TaskFilters.vue', () => {
         await wrapper.find('#filter-sort').setValue('dueDate,asc');
         await wrapper.find('form').trigger('submit');
 
-        expect(wrapper.emitted('apply')[0][0]).toEqual({
+        expect(wrapper.emitted('apply')![0][0]).toEqual({
             q: 'groceries',
             status: 'COMPLETED',
             priority: 'HIGH',
@@ -67,10 +69,14 @@ describe('components/TaskFilters.vue', () => {
 
         await wrapper.find('#filter-q').setValue('groceries');
         await wrapper.find('form').trigger('submit');
-        const emitted = wrapper.emitted('apply')[0][0];
+        const emitted = wrapper.emitted('apply')![0][0] as Filters;
 
         emitted.q = 'tampered';
-        expect(wrapper.vm.draft.q).toBe('groceries');
+
+        // Re-submitting proves the internal draft was untouched by the mutation above.
+        await wrapper.find('form').trigger('submit');
+        const resubmitted = wrapper.emitted('apply')![1][0] as Filters;
+        expect(resubmitted.q).toBe('groceries');
     });
 
     it('Reset clears the fields and emits the empty filter set', async () => {
@@ -78,10 +84,10 @@ describe('components/TaskFilters.vue', () => {
 
         await wrapper.find('#filter-q').setValue('groceries');
         await wrapper.find('#filter-status').setValue('COMPLETED');
-        await wrapper.findAll('button').find((b) => b.text() === 'Reset').trigger('click');
+        await wrapper.findAll('button').find((b) => b.text() === 'Reset')!.trigger('click');
 
-        expect(wrapper.emitted('apply').at(-1)[0]).toEqual(emptyFilters());
-        expect(wrapper.find('#filter-q').element.value).toBe('');
-        expect(wrapper.find('#filter-status').element.value).toBe('');
+        expect(wrapper.emitted('apply')!.at(-1)![0]).toEqual(emptyFilters());
+        expect((wrapper.find('#filter-q').element as HTMLInputElement).value).toBe('');
+        expect((wrapper.find('#filter-status').element as HTMLSelectElement).value).toBe('');
     });
 });

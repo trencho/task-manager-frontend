@@ -1,5 +1,6 @@
 import {fileURLToPath, URL} from 'node:url';
-import {defineConfig} from 'vite';
+// Import from 'vitest/config' (not 'vite') so the `test` block is type-checked.
+import {defineConfig} from 'vitest/config';
 import vue from '@vitejs/plugin-vue';
 
 export default defineConfig({
@@ -39,11 +40,11 @@ export default defineConfig({
     test: {
         environment: 'jsdom',
         globals: true,
-        include: ['src/tests/**/*.spec.js'],
+        include: ['src/tests/**/*.spec.ts'],
         coverage: {
             provider: 'v8',
-            include: ['src/**/*.{js,vue}'],
-            exclude: ['src/tests/**', 'src/main.js']
+            include: ['src/**/*.{ts,vue}'],
+            exclude: ['src/tests/**', 'src/main.ts', 'src/env.d.ts', 'src/types.ts']
         }
     }
 });

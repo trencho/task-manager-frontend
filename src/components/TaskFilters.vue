@@ -84,42 +84,31 @@
   </form>
 </template>
 
-<script>
+<script setup lang="ts">
+import { ref } from 'vue';
 import { TASK_PRIORITIES } from '@/constants/taskPriority';
 import { TASK_STATUSES } from '@/constants/taskStatus';
+import { SORT_OPTIONS, emptyFilters } from '@/constants/taskFilters';
+import type { Filters } from '@/types';
 
-export const SORT_OPTIONS = [
-  {value: '', label: 'Default'},
-  {value: 'dueDate,asc', label: 'Due date (soonest first)'},
-  {value: 'dueDate,desc', label: 'Due date (latest first)'},
-  {value: 'title,asc', label: 'Title (A-Z)'},
-  {value: 'title,desc', label: 'Title (Z-A)'}
-];
+defineOptions({ name: 'TaskFilters' });
 
-export const emptyFilters = () => ({ q: '', status: '', priority: '', dueBefore: '', sort: '' });
+const emit = defineEmits<{ apply: [filters: Filters] }>();
 
-export default {
-  name: 'TaskFilters',
-  emits: ['apply'],
-  data() {
-    return {
-      statuses: TASK_STATUSES,
-      priorities: TASK_PRIORITIES,
-      sortOptions: SORT_OPTIONS,
-      // Held locally and emitted on submit, so typing in the search box does not fire a request
-      // per keystroke.
-      draft: emptyFilters()
-    };
-  },
-  methods: {
-    apply() {
-      this.$emit('apply', { ...this.draft });
-    },
-    reset() {
-      this.draft = emptyFilters();
-      this.apply();
-    }
-  }
+const statuses = TASK_STATUSES;
+const priorities = TASK_PRIORITIES;
+const sortOptions = SORT_OPTIONS;
+// Held locally and emitted on submit, so typing in the search box does not fire a request
+// per keystroke.
+const draft = ref<Filters>(emptyFilters());
+
+const apply = (): void => {
+  emit('apply', { ...draft.value });
+};
+
+const reset = (): void => {
+  draft.value = emptyFilters();
+  apply();
 };
 </script>
 

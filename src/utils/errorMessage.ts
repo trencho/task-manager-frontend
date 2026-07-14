@@ -1,5 +1,12 @@
 const FALLBACK = 'Something went wrong. Please try again.';
 
+// The subset of an axios rejection this reads. The backend answers with a bare string, a
+// `{message}` object, or an array of validation failures, so `data` is deliberately unknown.
+interface ApiError {
+  response?: { data?: unknown };
+  message?: unknown;
+}
+
 /**
  * Turns anything axios can reject with into a string safe to render.
  *
@@ -11,8 +18,9 @@ const FALLBACK = 'Something went wrong. Please try again.';
  * The backend answers with a bare string, a `{message}` object, or an array of validation
  * failures, depending on the endpoint. All three arrive here.
  */
-export function apiErrorMessage(error) {
-  const data = error?.response?.data;
+export function apiErrorMessage(error: unknown): string {
+  const err = error as ApiError | null | undefined;
+  const data = err?.response?.data;
 
   if (Array.isArray(data)) {
     const joined = data.filter(Boolean).join(', ');
@@ -25,12 +33,15 @@ export function apiErrorMessage(error) {
     return data;
   }
 
-  if (data && typeof data.message === 'string' && data.message.trim()) {
-    return data.message;
+  if (data && typeof data === 'object' && 'message' in data) {
+    const message = (data as { message: unknown }).message;
+    if (typeof message === 'string' && message.trim()) {
+      return message;
+    }
   }
 
-  if (typeof error?.message === 'string' && error.message.trim()) {
-    return error.message;
+  if (typeof err?.message === 'string' && err.message.trim()) {
+    return err.message;
   }
 
   return FALLBACK;

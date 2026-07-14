@@ -1,4 +1,4 @@
-import {vi} from 'vitest';
+import { vi } from 'vitest';
 import { shallowMount } from '@vue/test-utils';
 
 vi.mock('@/utils/axiosSetup', () => ({

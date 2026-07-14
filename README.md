@@ -7,17 +7,23 @@ A single-page task manager. Register, sign in, and manage your own tasks. The cl
 
 | | |
 |---|---|
-| Framework | Vue 3.5 (Options API, single-file components) |
+| Language | TypeScript 6 (strict) |
+| Framework | Vue 3.5 (Composition API, `<script setup>` single-file components) |
 | Routing | vue-router 5, with per-route auth guards |
 | HTTP | axios, with a shared instance that attaches the JWT and refreshes it on `401` |
 | Build | Vite 8 |
+| Type-check | `vue-tsc` |
 | Tests | Vitest 4 + `@vue/test-utils` 2 |
-| Lint | ESLint 10 (flat config) + `eslint-plugin-vue` |
+| Lint | ESLint 10 (flat config) + `eslint-plugin-vue` + `typescript-eslint` |
 | Package manager | **npm** (`package-lock.json` is committed) |
 | Deploy | Docker → nginx |
 
+TypeScript is pinned to **6.x**, not the newer 7.x: `typescript-eslint` supports only `<6.1.0`, so 6.0
+is the newest version the whole toolchain (vue-tsc + typescript-eslint) agrees on. This mirrors the
+existing policy of holding tool majors until the ecosystem catches up.
+
 There is **no Vuex or Pinia store.** State lives in the components; the auth tokens live in
-`localStorage`, behind `src/utils/auth.js`.
+`localStorage`, behind `src/utils/auth.ts`.
 
 ## Setup
 
@@ -63,19 +69,22 @@ See [`.env.example`](.env.example).
 | `npm run build` | Production bundle into `dist/` |
 | `npm run preview` | Serve the built bundle locally |
 | `npm run lint` | ESLint |
-| `npm test` | Vitest, 86 tests |
+| `npm run type-check` | `vue-tsc` — type-checks `.ts` and `.vue` |
+| `npm test` | Vitest, 89 tests |
 | `npm run coverage` | Vitest + v8 coverage |
 
-CI runs `npm ci && npm run lint && npm test && npm run build` on every push and pull request.
+CI runs `npm ci && npm run lint && npm run type-check && npm test && npm run build` on every push and pull request.
 See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 ## Architecture
 
 ```text
 src/
-├── main.js                  app entry (loaded by /index.html at the repo root)
+├── main.ts                  app entry (loaded by /index.html at the repo root)
 ├── App.vue                  root, renders <router-view>
-├── router/index.js          routes + navigation guards
+├── env.d.ts                 ambient types (import.meta.env.VITE_API_URL)
+├── types.ts                 shared domain types (Task, NewTask, PagedTasks, Filters, …)
+├── router/index.ts          routes + navigation guards
 ├── views/
 │   ├── LoginView.vue        route /login       (requiresGuest)
 │   ├── RegisterView.vue     route /signup      (requiresGuest)
@@ -89,12 +98,13 @@ src/
 │   ├── ErrorBanner.vue      inline, accessible API-error region (replaced alert())
 │   └── LogoutButton.vue
 ├── constants/
-│   ├── taskStatus.js        PENDING / IN_PROGRESS / COMPLETED
-│   └── taskPriority.js      LOW / MEDIUM / HIGH
+│   ├── taskStatus.ts        PENDING / IN_PROGRESS / COMPLETED (+ TaskStatus type)
+│   ├── taskPriority.ts      LOW / MEDIUM / HIGH (+ TaskPriority type)
+│   └── taskFilters.ts       SORT_OPTIONS + emptyFilters()
 ├── utils/
-│   ├── auth.js              access_token / refresh_token in localStorage
-│   ├── axiosSetup.js        axios instance: Bearer header + 401 refresh-and-retry
-│   └── errorMessage.js      maps an axios failure to display text for ErrorBanner
+│   ├── auth.ts              access_token / refresh_token in localStorage
+│   ├── axiosSetup.ts        axios instance: Bearer header + 401 refresh-and-retry
+│   └── errorMessage.ts      maps an axios failure to display text for ErrorBanner
 └── tests/unit/              Vitest specs
 ```
 
@@ -106,7 +116,7 @@ src/
 ### Authentication flow
 
 `LoginForm` posts to `/api/auth/login` and stores the returned `accessToken` and `refreshToken`.
-Every subsequent request goes through the axios instance in `utils/axiosSetup.js`, which:
+Every subsequent request goes through the axios instance in `utils/axiosSetup.ts`, which:
 
 1. attaches `Authorization: Bearer <accessToken>`;
 2. on a `401`, calls `/api/auth/refresh-token` once, stores the **new access token and the
@@ -150,7 +160,7 @@ Candidate features, derived from this README and the gaps between it and the cod
 3. ~~**Filter and search.**~~ Done. `TaskFilters` sends `q` (title/description search), `status`,
    `priority`, and `dueBefore`; the backend matches on all four, combinable with pagination.
 4. ~~**Surface API errors properly.**~~ Done. `ErrorBanner` shows failures in an inline, accessible
-   region and `alert()` is gone — see `utils/errorMessage.js`.
+   region and `alert()` is gone — see `utils/errorMessage.ts`.
 5. **Introduce a store (Pinia)** *if* shared state grows beyond auth tokens. Not needed today —
    and an earlier version of this README claimed one existed when it did not.
 6. ~~**Log out server-side.**~~ Done. `LogoutButton` calls `POST /api/auth/logout`, which revokes
