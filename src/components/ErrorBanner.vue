@@ -13,24 +13,16 @@
       type="button"
       class="error-banner__dismiss"
       aria-label="Dismiss error"
-      @click="$emit('dismiss')"
+      @click="emit('dismiss')"
     >
       &times;
     </button>
   </div>
 </template>
 
-<script>
-export default {
-  name: 'ErrorBanner',
-  props: {
-    message: {
-      type: String,
-      default: ''
-    }
-  },
-  emits: ['dismiss']
-};
+<script setup lang="ts">
+withDefaults(defineProps<{ message?: string }>(), { message: '' });
+const emit = defineEmits<{ dismiss: [] }>();
 </script>
 
 <style scoped>
