@@ -4,9 +4,12 @@ export const TASK_PRIORITIES = [
     {value: 'LOW', label: 'Low'},
     {value: 'MEDIUM', label: 'Medium'},
     {value: 'HIGH', label: 'High'}
-];
+] as const;
 
-export const DEFAULT_TASK_PRIORITY = 'MEDIUM';
+// Derived from the array above so the values stay the single source of truth.
+export type TaskPriority = (typeof TASK_PRIORITIES)[number]['value'];
 
-export const priorityLabel = (value) =>
+export const DEFAULT_TASK_PRIORITY: TaskPriority = 'MEDIUM';
+
+export const priorityLabel = (value: string): string =>
     TASK_PRIORITIES.find((priority) => priority.value === value)?.label ?? value;

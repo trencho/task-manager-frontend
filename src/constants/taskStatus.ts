@@ -4,9 +4,12 @@ export const TASK_STATUSES = [
     {value: 'PENDING', label: 'Pending'},
     {value: 'IN_PROGRESS', label: 'In progress'},
     {value: 'COMPLETED', label: 'Completed'}
-];
+] as const;
 
-export const DEFAULT_TASK_STATUS = 'PENDING';
+// Derived from the array above so the values stay the single source of truth.
+export type TaskStatus = (typeof TASK_STATUSES)[number]['value'];
 
-export const statusLabel = (value) =>
+export const DEFAULT_TASK_STATUS: TaskStatus = 'PENDING';
+
+export const statusLabel = (value: string): string =>
     TASK_STATUSES.find((status) => status.value === value)?.label ?? value;
