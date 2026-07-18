@@ -280,7 +280,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@eslint/js@npm:^10.0.1":
+"@eslint/js@npm:10.0.1":
   version: 10.0.1
   resolution: "@eslint/js@npm:10.0.1"
   peerDependencies:
@@ -585,7 +585,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tsconfig/node24@npm:^24.0.4":
+"@tsconfig/node24@npm:24.0.4":
   version: 24.0.4
   resolution: "@tsconfig/node24@npm:24.0.4"
   checksum: 10c0/9c5d4173204c6935c45d3ff0584fd423bd7d8bc3f6b246e646320ae584e4226b34ea1c66ec67cd16769c73e7e80f4cc562287b0acaa4ec81aa482463972ff83f
@@ -646,7 +646,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^24.13.3":
+"@types/node@npm:24.13.3":
   version: 24.13.3
   resolution: "@types/node@npm:24.13.3"
   dependencies:
@@ -1169,7 +1169,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vue/tsconfig@npm:^0.9.1":
+"@vue/tsconfig@npm:0.9.1":
   version: 0.9.1
   resolution: "@vue/tsconfig@npm:0.9.1"
   peerDependencies:
@@ -1686,7 +1686,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint-plugin-vue@npm:^10.9.2":
+"eslint-plugin-vue@npm:10.9.2":
   version: 10.9.2
   resolution: "eslint-plugin-vue@npm:10.9.2"
   dependencies:
@@ -1736,7 +1736,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint@npm:^10.7.0":
+"eslint@npm:10.7.0":
   version: 10.7.0
   resolution: "eslint@npm:10.7.0"
   dependencies:
@@ -2042,7 +2042,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"globals@npm:^17.7.0":
+"globals@npm:17.7.0":
   version: 17.7.0
   resolution: "globals@npm:17.7.0"
   checksum: 10c0/e83f791acf537b85fa1632ac48a45432a1999a61acd9f955b5c2145f66d6b5000a7945029874b6184fa2dfac8d33af03885a5a7ffa457866f1bcf0b40d0c1291
@@ -3151,26 +3151,26 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "task-manager-vue@workspace:."
   dependencies:
-    "@eslint/js": "npm:^10.0.1"
-    "@tsconfig/node24": "npm:^24.0.4"
-    "@types/node": "npm:^24.13.3"
+    "@eslint/js": "npm:10.0.1"
+    "@tsconfig/node24": "npm:24.0.4"
+    "@types/node": "npm:24.13.3"
     "@vitejs/plugin-vue": "npm:6.0.8"
     "@vitest/coverage-v8": "npm:4.1.10"
     "@vue/test-utils": "npm:2.4.11"
-    "@vue/tsconfig": "npm:^0.9.1"
+    "@vue/tsconfig": "npm:0.9.1"
     axios: "npm:1.18.1"
-    eslint: "npm:^10.7.0"
-    eslint-plugin-vue: "npm:^10.9.2"
-    globals: "npm:^17.7.0"
+    eslint: "npm:10.7.0"
+    eslint-plugin-vue: "npm:10.9.2"
+    globals: "npm:17.7.0"
     jsdom: "npm:29.1.1"
-    typescript: "npm:^6.0.3"
-    typescript-eslint: "npm:^8.64.0"
+    typescript: "npm:6.0.3"
+    typescript-eslint: "npm:8.64.0"
     vite: "npm:8.1.5"
     vitest: "npm:4.1.10"
     vue: "npm:3.5.40"
     vue-eslint-parser: "npm:10.4.1"
     vue-router: "npm:5.2.0"
-    vue-tsc: "npm:^3.3.7"
+    vue-tsc: "npm:3.3.7"
   languageName: unknown
   linkType: soft
 
@@ -3266,7 +3266,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript-eslint@npm:^8.64.0":
+"typescript-eslint@npm:8.64.0":
   version: 8.64.0
   resolution: "typescript-eslint@npm:8.64.0"
   dependencies:
@@ -3281,7 +3281,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:^6.0.3":
+"typescript@npm:6.0.3":
   version: 6.0.3
   resolution: "typescript@npm:6.0.3"
   bin:
@@ -3291,7 +3291,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@npm%3A^6.0.3#optional!builtin<compat/typescript>":
+"typescript@patch:typescript@npm%3A6.0.3#optional!builtin<compat/typescript>":
   version: 6.0.3
   resolution: "typescript@patch:typescript@npm%3A6.0.3#optional!builtin<compat/typescript>::version=6.0.3&hash=5786d5"
   bin:
@@ -3648,7 +3648,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vue-tsc@npm:^3.3.7":
+"vue-tsc@npm:3.3.7":
   version: 3.3.7
   resolution: "vue-tsc@npm:3.3.7"
   dependencies:
