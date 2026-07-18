@@ -1,8 +1,19 @@
 .DS_Store
 node_modules
 /dist
-yarn.lock
 
+# npm is no longer used; keep a stray lockfile out of the tree (Yarn's yarn.lock is committed).
+package-lock.json
+
+# Yarn Berry: commit the lockfile, ignore the rest of .yarn/. Yarn is Corepack-managed,
+# so nothing lives under .yarn/releases here.
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
 
 # local env files
 .env.local

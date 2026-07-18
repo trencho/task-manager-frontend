@@ -15,7 +15,7 @@ A single-page task manager. Register, sign in, and manage your own tasks. The cl
 | Type-check | `vue-tsc` |
 | Tests | Vitest 4 + `@vue/test-utils` 2 |
 | Lint | ESLint 10 (flat config) + `eslint-plugin-vue` + `typescript-eslint` |
-| Package manager | **npm** (`package-lock.json` is committed) |
+| Package manager | **Yarn 4 (Berry)**, Corepack-pinned (`yarn.lock` is committed) |
 | Deploy | Docker → nginx |
 
 TypeScript is pinned to **6.x**, not the newer 7.x: `typescript-eslint` supports only `<6.1.0`, so 6.0
@@ -30,11 +30,14 @@ There is **no Vuex or Pinia store.** State lives in the components; the auth tok
 ```bash
 git clone https://github.com/trencho/task-manager-frontend.git
 cd task-manager-frontend
-npm ci          # installs exactly the committed lockfile
+corepack enable            # activates the Yarn version pinned in package.json
+yarn install --immutable   # installs exactly the committed lockfile
 ```
 
-Use `npm ci`, not `npm install` — it fails when `package.json` and the lockfile disagree instead
-of quietly resolving around the conflict.
+Yarn is managed by [Corepack](https://nodejs.org/api/corepack.html) (bundled with Node), so the
+exact Yarn version comes from `package.json`'s `packageManager` field — no global install needed.
+Use `yarn install --immutable`, not a plain `yarn install` — it fails when `package.json` and
+`yarn.lock` disagree instead of quietly rewriting the lockfile.
 
 ## Configuration
 
@@ -48,15 +51,15 @@ In development the Vite dev server proxies those to `VITE_DEV_PROXY_TARGET`, whi
 needs CORS on the backend.
 
 ```bash
-npm run dev                                   # proxies /api to http://localhost:80
-VITE_DEV_PROXY_TARGET=http://localhost:9000 npm run dev
-VITE_API_URL=https://api.example.com npm run build
+yarn dev                                      # proxies /api to http://localhost:80
+VITE_DEV_PROXY_TARGET=http://localhost:9000 yarn dev
+VITE_API_URL=https://api.example.com yarn build
 ```
 
 | Variable | Where | Default | Notes |
 |---|---|---|---|
 | `VITE_API_URL` | build time | empty | Compiled into the bundle. Empty means same-origin. |
-| `VITE_DEV_PROXY_TARGET` | `npm run dev` | `http://localhost:80` | Dev server only |
+| `VITE_DEV_PROXY_TARGET` | `yarn dev` | `http://localhost:80` | Dev server only |
 | `BACKEND_URL` | container run time | `http://spring:80` | Where nginx forwards `/api`. An unset value makes nginx refuse to start. |
 
 See [`.env.example`](.env.example).
@@ -65,15 +68,15 @@ See [`.env.example`](.env.example).
 
 | Command | Does |
 |---|---|
-| `npm run dev` | Vite dev server with HMR on `:8080` |
-| `npm run build` | Production bundle into `dist/` |
-| `npm run preview` | Serve the built bundle locally |
-| `npm run lint` | ESLint |
-| `npm run type-check` | `vue-tsc` — type-checks `.ts` and `.vue` |
-| `npm test` | Vitest, 89 tests |
-| `npm run coverage` | Vitest + v8 coverage |
+| `yarn dev` | Vite dev server with HMR on `:8080` |
+| `yarn build` | Production bundle into `dist/` |
+| `yarn preview` | Serve the built bundle locally |
+| `yarn lint` | ESLint |
+| `yarn type-check` | `vue-tsc` — type-checks `.ts` and `.vue` |
+| `yarn test` | Vitest, 89 tests |
+| `yarn coverage` | Vitest + v8 coverage |
 
-CI runs `npm ci && npm run lint && npm run type-check && npm test && npm run build` on every push and pull request.
+CI runs `yarn install --immutable && yarn lint && yarn type-check && yarn test && yarn build` on every push and pull request.
 See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 ## Architecture
@@ -165,9 +168,9 @@ Candidate features, derived from this README and the gaps between it and the cod
    and an earlier version of this README claimed one existed when it did not.
 6. ~~**Log out server-side.**~~ Done. `LogoutButton` calls `POST /api/auth/logout`, which revokes
    the refresh token. The local session is cleared even if that call fails.
-7. ~~**Replace Vue CLI with Vite.**~~ Done. `npm audit` now reports **0** advisories, down from 9.
+7. ~~**Replace Vue CLI with Vite.**~~ Done. `yarn npm audit` now reports **0** advisories, down from 9.
 
 ## Notes
 
-- `npm audit` reports **0 vulnerabilities**. The 9 advisories that used to sit in the build chain
+- `yarn npm audit` reports **0 vulnerabilities**. The 9 advisories that used to sit in the build chain
   left with Vue CLI.

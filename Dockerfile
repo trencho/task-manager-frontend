@@ -2,9 +2,8 @@
 
 # Two stages: build the bundle with Node, serve it with nginx.
 #
-# The previous version of this file was an unmodified `docker init` Node template. It
-# bind-mounted a yarn.lock that does not exist (this project uses npm), copied from
-# /usr/src/app/build when the bundler emits dist/, never copied nginx.conf, and ended in a
+# The previous version of this file was an unmodified `docker init` Node template. It copied
+# from /usr/src/app/build when the bundler emits dist/, never copied nginx.conf, and ended in a
 # node:alpine stage whose CMD invoked an nginx that was not installed. It could not build,
 # and could not have run if it had.
 
@@ -17,10 +16,12 @@ FROM node:${NODE_VERSION}-alpine AS build
 
 WORKDIR /usr/src/app
 
-# `npm ci` installs exactly the committed lockfile and fails if package.json and
-# package-lock.json disagree. Copy only the manifests first so this layer caches.
-COPY package.json package-lock.json ./
-RUN --mount=type=cache,target=/root/.npm npm ci
+# `yarn install --immutable` installs exactly the committed yarn.lock and fails if it and
+# package.json disagree. Copy only the manifests first so this layer caches. Corepack (bundled
+# with the Node image) activates the Yarn pinned in package.json's "packageManager".
+COPY package.json yarn.lock .yarnrc.yml ./
+RUN --mount=type=cache,target=/root/.yarn/berry/cache \
+    corepack enable && yarn install --immutable
 
 COPY . .
 
@@ -29,7 +30,7 @@ COPY . .
 # it empty to emit same-origin relative requests for a reverse proxy to handle.
 ARG VITE_API_URL
 ENV VITE_API_URL=${VITE_API_URL}
-RUN npm run build
+RUN yarn build
 
 ################################################################################
 # Serve the static bundle. nginx:alpine already runs as a non-root worker.
