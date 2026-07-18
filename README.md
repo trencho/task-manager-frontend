@@ -153,22 +153,11 @@ Builds the bundle and serves it through nginx (`nginx.conf`). See [`README.Docke
 
 ## Roadmap
 
-Candidate features, derived from this README and the gaps between it and the code:
+No open roadmap items — every feature this README describes is implemented.
 
-1. ~~**Set a task's status from the UI.**~~ Done. `TaskForm` has a status select bound to the
-   backend's `TaskStatus`, and `TaskList` shows each task's status. "Mark tasks as complete" —
-   claimed by an earlier version of this README, and impossible until now — works.
-2. ~~**Sort tasks.**~~ Done. `TaskFilters` sorts by due date or title, ascending or descending,
-   passed to `GET /api/tasks` as `sort`.
-3. ~~**Filter and search.**~~ Done. `TaskFilters` sends `q` (title/description search), `status`,
-   `priority`, and `dueBefore`; the backend matches on all four, combinable with pagination.
-4. ~~**Surface API errors properly.**~~ Done. `ErrorBanner` shows failures in an inline, accessible
-   region and `alert()` is gone — see `utils/errorMessage.ts`.
-5. **Introduce a store (Pinia)** *if* shared state grows beyond auth tokens. Not needed today —
-   and an earlier version of this README claimed one existed when it did not.
-6. ~~**Log out server-side.**~~ Done. `LogoutButton` calls `POST /api/auth/logout`, which revokes
-   the refresh token. The local session is cleared even if that call fails.
-7. ~~**Replace Vue CLI with Vite.**~~ Done. `yarn npm audit` now reports **0** advisories, down from 9.
+A Pinia/Vuex store is deliberately **not** on the roadmap: state stays component-local until it needs
+to be shared beyond the auth tokens (see "There is no Vuex or Pinia store" above). If that need
+appears, introducing a store becomes the first real item here.
 
 ## Notes
 
