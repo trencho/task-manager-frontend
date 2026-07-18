@@ -21,29 +21,34 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Activate the Corepack-pinned Yarn (package.json "packageManager") before setup-node,
+      # so its cache: yarn step can resolve Yarn's cache folder. Uses the runner's Node.
+      - name: Enable Corepack
+        run: corepack enable
+
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: npm
+          cache: yarn
 
-      # `npm ci` installs exactly the committed lockfile and fails if package.json and
-      # package-lock.json disagree. `npm install` would quietly resolve around a conflict.
+      # `--immutable` installs exactly the committed yarn.lock and fails if package.json and
+      # the lockfile disagree. A plain `yarn install` would quietly rewrite the lockfile.
       - name: Install
-        run: npm ci
+        run: yarn install --immutable
 
       - name: Lint
-        run: npm run lint
+        run: yarn lint
 
       # vue-tsc is the type gate; Vite/Vitest transpile TS but do not type-check it.
       - name: Type-check
-        run: npm run type-check
+        run: yarn type-check
 
       # This suite once silently ran ZERO tests for months: jest resolved
       # testEnvironment 'jsdom' to a jest-environment-jsdom major that its constructor
       # could not load, every suite failed to load, and nobody ran it. Jest exits
       # non-zero when no tests are found, so CI is the guard against that recurring.
       - name: Test
-        run: npm test
+        run: yarn test
 
       - name: Build
-        run: npm run build
+        run: yarn build
