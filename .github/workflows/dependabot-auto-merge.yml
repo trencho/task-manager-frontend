@@ -22,7 +22,7 @@ jobs:
     steps:
       - name: Fetch Dependabot metadata
         id: meta
-        uses: dependabot/fetch-metadata@v2
+        uses: dependabot/fetch-metadata@v3
 
       # Patch + minor only. Majors are excluded here and by dependabot.yml, so they stay manual.
       - name: Enable auto-merge for patch/minor
