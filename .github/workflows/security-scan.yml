@@ -1,0 +1,35 @@
+name: Security scan
+
+# Weekly OSV vulnerability scan of the dependency tree, deliberately decoupled from the CI / merge
+# gate: a newly-published advisory surfaces as a scheduled red (and notifies the owner) without ever
+# blocking a PR. Uses the plain OSV-Scanner action (no SARIF upload), so no GitHub Advanced Security
+# is required; the job fails if OSV finds a known vulnerability. OSV reads yarn.lock natively — the
+# full, pinned transitive tree — so no SBOM step is needed. Record any reviewed, accepted advisory in
+# osv-scanner.toml (scoped to the exact ID) so it goes red only when a NEW one lands.
+on:
+  schedule:
+    - cron: "31 4 * * 1" # weekly, Monday 04:31 UTC
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-scan-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  osv-scan:
+    name: OSV scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: OSV-Scanner
+        uses: google/osv-scanner-action/osv-scanner-action@v2.3.8
+        with:
+          scan-args: |-
+            -L
+            yarn.lock
