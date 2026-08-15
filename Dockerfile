@@ -7,12 +7,17 @@
 # node:alpine stage whose CMD invoked an nginx that was not installed. It could not build,
 # and could not have run if it had.
 
-ARG NODE_VERSION=24.18.0
-ARG NGINX_VERSION=1.29-alpine
-
 ################################################################################
 # Build the production bundle.
-FROM node:${NODE_VERSION}-alpine AS build
+#
+# Base images are named INLINE, deliberately. These versions used to live in
+# `ARG NODE_VERSION` / `ARG NGINX_VERSION`, and Dependabot's docker ecosystem does not resolve a
+# tag out of an ARG -- so despite `docker` being configured in .github/dependabot.yml, it had
+# never once proposed a base-image bump here (0 of 20 PRs), while sibling repos with plain FROM
+# lines get them routinely. Nothing passed those ARGs either: docker-compose.yml's `build:` block
+# has no `args:` and no workflow passes --build-arg. They only hid the versions from the updater.
+# Keep the version on the FROM line.
+FROM node:24.18.0-alpine AS build
 
 WORKDIR /usr/src/app
 
@@ -34,7 +39,7 @@ RUN yarn build
 
 ################################################################################
 # Serve the static bundle. nginx:alpine already runs as a non-root worker.
-FROM nginx:${NGINX_VERSION} AS final
+FROM nginx:1.29-alpine AS final
 
 # Rendered into /etc/nginx/conf.d/default.conf at container start. A default is essential:
 # an unset BACKEND_URL renders `proxy_pass ;` and nginx refuses to start.

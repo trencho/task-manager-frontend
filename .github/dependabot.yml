@@ -34,3 +34,14 @@ updates:
       interval: weekly
     commit-message:
       prefix: chore
+    # PATCH bumps only (node 24.18.0 -> 24.18.1), deliberately. The docker ecosystem matches TAGS,
+    # which carry no release-channel metadata, so the usual "pre-releases are not proposed unless you
+    # are already on one" guarantee does not hold: sibling repos had python:3.14.6-slim ->
+    # python:3.15.0rc1-slim scored an ordinary minor and auto-merged into production images. A
+    # base-image minor is a runtime upgrade anyway -- node 24 -> 25 should move together with CI,
+    # engines.node and .nvmrc, not arrive on its own.
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
+          - version-update:semver-minor
