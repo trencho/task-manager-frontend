@@ -20,6 +20,17 @@ updates:
         update-types: [version-update:semver-major]
       - dependency-name: "eslint-plugin-vue"
         update-types: [version-update:semver-major]
+      # TypeScript 7 is the native-compiler rewrite and is blocked upstream, not deferred by
+      # preference: typescript-eslint peers `typescript >=4.8.4 <6.1.0`, so no released version
+      # supports it, and Yarn's builtin typescript compat patch breaks on the native compiler.
+      # Without this, Dependabot reopens a PR that cannot pass (it already did once, #14), and a
+      # permanently-red PR is noise that hides the red that matters.
+      #
+      # Lift it when typescript-eslint ships TS 7 support, moving the toolchain together
+      # (typescript, typescript-eslint, vue-tsc) rather than this pin alone. The other three
+      # TypeScript repos here hold the same major the same way.
+      - dependency-name: "typescript"
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: github-actions
     directory: /
