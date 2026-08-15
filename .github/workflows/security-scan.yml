@@ -8,7 +8,7 @@ name: Security scan
 # osv-scanner.toml (scoped to the exact ID) so it goes red only when a NEW one lands.
 on:
   schedule:
-    - cron: "31 4 * * 1" # weekly, Monday 04:31 UTC
+    - cron: "45 7 * * 1" # weekly, Monday 07:45 UTC - fleet slot (minutes staggered per repo)
   push:
     branches: [master]
   pull_request:
