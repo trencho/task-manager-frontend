@@ -5,6 +5,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+      day: monday
+      time: "04:00"
+      timezone: Europe/Skopje
     open-pull-requests-limit: 10
     commit-message:
       prefix: chore
@@ -18,8 +21,12 @@ updates:
       # deliberately, not through an automated PR.
       - dependency-name: "eslint"
         update-types: [version-update:semver-major]
+        # lift-when: npm-peer eslint-plugin-vue allows eslint >=10
       - dependency-name: "eslint-plugin-vue"
         update-types: [version-update:semver-major]
+        # lift-when: manual re-check - this was held when the repo was on ESLint 8; it is on 9
+        # now, so the stated reason ("plugin-vue 10 requires ESLint 9+ and flat config") may
+        # already be satisfied. Verify and drop rather than renewing it by habit
       # TypeScript 7 is the native-compiler rewrite and is blocked upstream, not deferred by
       # preference: typescript-eslint peers `typescript >=4.8.4 <6.1.0`, so no released version
       # supports it, and Yarn's builtin typescript compat patch breaks on the native compiler.
@@ -31,11 +38,15 @@ updates:
       # TypeScript repos here hold the same major the same way.
       - dependency-name: "typescript"
         update-types: [version-update:semver-major]
+        # lift-when: npm-peer typescript-eslint allows typescript >=7
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+      day: monday
+      time: "05:00"
+      timezone: Europe/Skopje
     commit-message:
       prefix: ci
 
@@ -43,16 +54,28 @@ updates:
     directory: /
     schedule:
       interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Skopje
     commit-message:
       prefix: chore
-    # PATCH bumps only (node 24.18.0 -> 24.18.1), deliberately. The docker ecosystem matches TAGS,
-    # which carry no release-channel metadata, so the usual "pre-releases are not proposed unless you
-    # are already on one" guarantee does not hold: sibling repos had python:3.14.6-slim ->
-    # python:3.15.0rc1-slim scored an ordinary minor and auto-merged into production images. A
-    # base-image minor is a runtime upgrade anyway -- node 24 -> 25 should move together with CI,
-    # engines.node and .nvmrc, not arrive on its own.
-    ignore:
-      - dependency-name: "*"
-        update-types:
-          - version-update:semver-major
-          - version-update:semver-minor
+    # No update-type restriction: majors, minors and patches all flow, and the guard that matters
+    # for images -- blocking a RELEASE-CANDIDATE tag -- lives in dependabot-auto-merge.yml instead.
+    # It has to: `docker` matches TAGS, which carry no release-channel metadata, so
+    # `python:3.14.6-slim` -> `python:3.15.0rc1-slim` scores an ordinary MINOR, and
+    # `ignore.versions` takes version RANGES rather than globs (dependabot-core#15154), so
+    # "no pre-releases" cannot be written here at all.
+
+  # Compose files -- a SEPARATE ecosystem from `docker`, which does NOT cover them. Before this
+  # block existed the image tags in these files were updated by nothing at all, because
+  # `docker` was configured and containers read as handled.
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Skopje
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: chore
