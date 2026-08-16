@@ -17,6 +17,13 @@ updates:
       minor-and-patch:
         update-types: [minor, patch]
     ignore:
+      # @types/node tracks the RUNTIME major, always -- typings for a Node the project does not run
+      # describe APIs that are not there. It reached 26.2.0 while the image was briefly on Node 26;
+      # both are back on 24. Same release condition as the image, so the two lift together.
+      # lift-when: eol-lts nodejs 26
+      - dependency-name: "@types/node"
+        versions: [">=25"]
+      #
       # The eslint / eslint-plugin-vue major holds were LIFTED on 2026-08-16, their release
       # condition having been met: the repo is on eslint 10.8.1 with eslint-plugin-vue 10.10.0,
       # whose peer range is `^8.57.0 || ^9.0.0 || ^10.0.0`. Left in place they had stopped
@@ -61,6 +68,17 @@ updates:
     # `python:3.14.6-slim` -> `python:3.15.0rc1-slim` scores an ordinary MINOR, and
     # `ignore.versions` takes version RANGES rather than globs (dependabot-core#15154), so
     # "no pre-releases" cannot be written here at all.
+    #
+    # ONE CARVE-OUT: the RUNTIME image tracks the current LTS, per
+    # references/runtime-lts-policy.md. The same missing tag metadata means Dependabot cannot tell
+    # an LTS major from a Current one -- node:24 -> node:26 scored an ordinary major and merged a
+    # NON-LTS runtime into this image on 2026-08-16, two months before Node 26's LTS date, with CI
+    # green because CI was still installing Node 24. Major-only: patches within the 24 line still
+    # flow. nginx is deliberately NOT held -- it has its own support policy, not an LTS line.
+    ignore:
+      # lift-when: eol-lts nodejs 26
+      - dependency-name: "node"
+        versions: [">=25"]
 
   # Compose files -- a SEPARATE ecosystem from `docker`, which does NOT cover them. Before this
   # block existed the image tags in these files were updated by nothing at all, because

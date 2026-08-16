@@ -17,7 +17,7 @@
 # lines get them routinely. Nothing passed those ARGs either: docker-compose.yml's `build:` block
 # has no `args:` and no workflow passes --build-arg. They only hid the versions from the updater.
 # Keep the version on the FROM line.
-FROM node:26.7.0-alpine AS build
+FROM node:24.19.0-alpine AS build
 
 WORKDIR /usr/src/app
 
