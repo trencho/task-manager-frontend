@@ -62,7 +62,7 @@ jobs:
 
       # --- (A) Node / TypeScript ---
       - uses: actions/setup-node@v7
-        with: { node-version: '24' }
+        with: { node-version: '26' }
       - name: Unused dependencies (knip)
         run: |
           echo -e "\n## Unused dependencies (knip)\n" >> report.md
