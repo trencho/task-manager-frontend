@@ -39,7 +39,7 @@ RUN yarn build
 
 ################################################################################
 # Serve the static bundle. nginx:alpine already runs as a non-root worker.
-FROM nginx:1.29-alpine AS final
+FROM nginx:1.31-alpine AS final
 
 # Rendered into /etc/nginx/conf.d/default.conf at container start. A default is essential:
 # an unset BACKEND_URL renders `proxy_pass ;` and nginx refuses to start.
