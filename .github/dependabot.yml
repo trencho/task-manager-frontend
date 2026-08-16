@@ -17,16 +17,12 @@ updates:
       minor-and-patch:
         update-types: [minor, patch]
     ignore:
-      # eslint-plugin-vue 10 requires ESLint 9+ and flat config. Move both together,
-      # deliberately, not through an automated PR.
-      - dependency-name: "eslint"
-        update-types: [version-update:semver-major]
-        # lift-when: npm-peer eslint-plugin-vue allows eslint >=10
-      - dependency-name: "eslint-plugin-vue"
-        update-types: [version-update:semver-major]
-        # lift-when: manual re-check - this was held when the repo was on ESLint 8; it is on 9
-        # now, so the stated reason ("plugin-vue 10 requires ESLint 9+ and flat config") may
-        # already be satisfied. Verify and drop rather than renewing it by habit
+      # The eslint / eslint-plugin-vue major holds were LIFTED on 2026-08-16, their release
+      # condition having been met: the repo is on eslint 10.8.1 with eslint-plugin-vue 10.10.0,
+      # whose peer range is `^8.57.0 || ^9.0.0 || ^10.0.0`. Left in place they had stopped
+      # describing the 9 -> 10 move they were written for and started blocking 11 -- a hold
+      # whose reason has expired keeps working perfectly, which is exactly the problem.
+      #
       # TypeScript 7 is the native-compiler rewrite and is blocked upstream, not deferred by
       # preference: typescript-eslint peers `typescript >=4.8.4 <6.1.0`, so no released version
       # supports it, and Yarn's builtin typescript compat patch breaks on the native compiler.
