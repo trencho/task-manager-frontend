@@ -107,7 +107,7 @@ jobs:
         run: |
           echo -e "\n## Unused dependencies (knip)\n" >> report.md
           echo '```' >> report.md
-          npx --yes knip@5 --no-exit-code --reporter compact >> report.md 2>&1 || true
+          NO_COLOR=1 npx --yes knip@5 --no-exit-code --reporter compact >> report.md 2>&1 || true
           echo '```' >> report.md
 
       # ============================================================================================
