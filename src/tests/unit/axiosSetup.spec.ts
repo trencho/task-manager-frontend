@@ -27,7 +27,7 @@ vi.mock('axios', () => {
 
 import axios from 'axios';
 import axiosInstanceDefault from '@/utils/axiosSetup';
-import { getAccessToken, getRefreshToken, setAccessToken, setRefreshToken } from '@/utils/auth';
+import { getAccessToken, setAccessToken } from '@/utils/auth';
 
 // The mock replaces these with vi.fn()s; the real axios types don't know that, so narrow here.
 const mockedCreate = axios.create as unknown as Mock;
@@ -84,7 +84,6 @@ describe('utils/axiosSetup', () => {
         });
 
         it('Refreshes the access token on a 401 and retries the request', async () => {
-            setRefreshToken('refresh-1');
             refreshClient().post.mockResolvedValue({
                 data: { accessToken: 'new-access-token', refreshToken: 'rotated-refresh-token' }
             });
@@ -93,17 +92,24 @@ describe('utils/axiosSetup', () => {
             const originalRequest: RequestConfig = { url: '/api/tasks', headers: {} };
             const result = await onResponseError()({ response: { status: 401 }, config: originalRequest });
 
-            expect(refreshClient().post).toHaveBeenCalledWith('/api/auth/refresh-token', { refreshToken: 'refresh-1' });
+            // No second argument: the refresh token is an httpOnly cookie the browser attaches
+            // itself. A body would mean this code had been able to read it.
+            expect(refreshClient().post).toHaveBeenCalledWith('/api/auth/refresh-token');
             expect(getAccessToken()).toBe('new-access-token');
             expect(instance).toHaveBeenCalledWith(originalRequest);
             expect(originalRequest._retry).toBe(true);
             expect(result).toEqual({ status: 200, data: 'retried' });
         });
 
-        // The server invalidates the presented refresh token. Storing only the access token
-        // would leave a dead refresh token behind, and the next 401 could never recover.
-        it('Stores the rotated refresh token, not just the access token', async () => {
-            setRefreshToken('refresh-1');
+        /**
+         * Was "stores the rotated refresh token". It must now do the opposite.
+         *
+         * The server still rotates and still returns the new token in the body during the
+         * migration, so "we ignore it" needs pinning rather than assuming -- storing it would put
+         * the credential straight back into localStorage, which is the exposure being removed.
+         * The replacement arrives as a Set-Cookie header the browser handles on its own.
+         */
+        it('Does not store the rotated refresh token from the body', async () => {
             refreshClient().post.mockResolvedValue({
                 data: { accessToken: 'new-access-token', refreshToken: 'rotated-refresh-token' }
             });
@@ -111,7 +117,8 @@ describe('utils/axiosSetup', () => {
 
             await onResponseError()({ response: { status: 401 }, config: { headers: {} } });
 
-            expect(getRefreshToken()).toBe('rotated-refresh-token');
+            expect(localStorage.getItem('refresh_token')).toBeNull();
+            expect(getAccessToken()).toBe('new-access-token');
         });
 
         it('Does not refresh twice for the same request', async () => {
@@ -122,18 +129,25 @@ describe('utils/axiosSetup', () => {
             expect(refreshClient().post).not.toHaveBeenCalled();
         });
 
-        it('Does not attempt a refresh when no refresh token is stored', async () => {
+        /**
+         * Was "does not attempt a refresh when no refresh token is stored". That early return is
+         * gone on purpose: this code can no longer see whether a session exists, because the token
+         * is a cookie it cannot read. It always asks, and the server answers 401 when there is
+         * nothing to refresh -- which must still not retry the original request.
+         */
+        it('Gives up without retrying when the server rejects the refresh', async () => {
+            refreshClient().post.mockRejectedValue(new Error('no session'));
+            vi.spyOn(console, 'error').mockImplementation(() => {
+            });
             const error: ErrorLike = { response: { status: 401 }, config: { headers: {} } };
 
             await expect(onResponseError()(error)).rejects.toBe(error);
-            expect(refreshClient().post).not.toHaveBeenCalled();
             expect(instance).not.toHaveBeenCalled();
         });
 
         // Retrying after a failed refresh just resends the same expired credentials.
-        it('Clears both tokens and does not retry when the refresh call itself fails', async () => {
+        it('Clears the session and does not retry when the refresh call itself fails', async () => {
             setAccessToken('access-1');
-            setRefreshToken('refresh-1');
             refreshClient().post.mockRejectedValue(new Error('refresh failed'));
             vi.spyOn(console, 'error').mockImplementation(() => {
             });

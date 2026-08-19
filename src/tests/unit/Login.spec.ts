@@ -47,7 +47,11 @@ describe('LoginForm.vue', () => {
             password: 'password123'
         });
         expect(localStorage.getItem('access_token')).toBe('mockAccessToken');
-        expect(localStorage.getItem('refresh_token')).toBe('mockRefreshToken');
+        // The refresh token must NOT be stored. The server sets it as an httpOnly cookie, and the
+        // response body still carries the field during the migration -- so "we ignore it" is pinned
+        // here rather than assumed. Storing it would put the credential straight back into
+        // localStorage, which is the exposure this change removes.
+        expect(localStorage.getItem('refresh_token')).toBeNull();
         expect(push).toHaveBeenCalledWith('/tasks');
         expect(wrapper.find('[role="alert"]').exists()).toBe(false);
     });
