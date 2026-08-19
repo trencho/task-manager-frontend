@@ -32,7 +32,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import ErrorBanner from '@/components/ErrorBanner.vue';
-import { setAccessToken, setRefreshToken } from '@/utils/auth';
+import { setAccessToken } from '@/utils/auth';
 import axiosInstance from '@/utils/axiosSetup';
 import { apiErrorMessage } from '@/utils/errorMessage';
 import type { AuthTokens } from '@/types';
@@ -50,7 +50,9 @@ const login = async (): Promise<void> => {
       password: password.value
     });
     setAccessToken(response.data.accessToken);
-    setRefreshToken(response.data.refreshToken);
+    // The refresh token is not stored: the server sets it as an httpOnly cookie on this response.
+    // It is still present in the body during the migration, and deliberately ignored - putting it
+    // into localStorage is exactly the exposure this change removes.
     router.push('/tasks');
   } catch (err) {
     error.value = apiErrorMessage(err);

@@ -1,6 +1,6 @@
 import axios from 'axios';
 import type { AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { getAccessToken, getRefreshToken, setAccessToken, setRefreshToken, clearTokens } from '@/utils/auth';
+import { getAccessToken, setAccessToken, clearTokens } from '@/utils/auth';
 import type { AuthTokens } from '@/types';
 
 // The request config carries a one-shot `_retry` flag we set after a 401 triggers a refresh.
@@ -16,7 +16,9 @@ const axiosInstance = axios.create({ baseURL });
 // so a 401 from /refresh-token cannot recurse back into the refresh handler. Using the bare
 // `axios` module here instead would ignore baseURL entirely and send the refresh to a
 // different origin than every other request.
-const refreshClient = axios.create({ baseURL });
+// withCredentials so the browser attaches the httpOnly refresh cookie. The access token still
+// travels as an Authorization header on the main instance.
+const refreshClient = axios.create({ baseURL, withCredentials: true });
 
 axiosInstance.interceptors.request.use((config) => {
     const accessToken = getAccessToken();
@@ -28,17 +30,20 @@ axiosInstance.interceptors.request.use((config) => {
     return Promise.reject(error);
 });
 
-// The server rotates the refresh token: the presented one is invalidated and a new one comes
-// back with the access token. Both must be stored, or the next refresh presents a dead token.
+// The refresh token is an httpOnly cookie the browser attaches itself, so there is nothing to look
+// up and nothing to send. That is the point: this code cannot read it, so neither can an attacker's.
+// The server still rotates on every use and sets the replacement cookie in its response.
+//
+// It follows that the client can no longer tell in advance whether a session exists -- the old
+// early return on a missing token is gone, and the server decides by answering 401.
 const refreshAccessToken = async (): Promise<boolean> => {
-    const refreshToken = getRefreshToken();
-    if (!refreshToken) {
-        return false;
-    }
     try {
-        const { data } = await refreshClient.post<AuthTokens>('/api/auth/refresh-token', { refreshToken });
+        const { data } = await refreshClient.post<AuthTokens>('/api/auth/refresh-token');
+        // A 200 with no access token is a broken contract, not a refreshed session.
+        if (!data.accessToken) {
+            throw new Error('Refresh response did not contain an access token');
+        }
         setAccessToken(data.accessToken);
-        setRefreshToken(data.refreshToken);
         return true;
     } catch (error) {
         console.error('Failed to refresh access token:', error);
