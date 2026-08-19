@@ -84,9 +84,7 @@ describe('utils/axiosSetup', () => {
         });
 
         it('Refreshes the access token on a 401 and retries the request', async () => {
-            refreshClient().post.mockResolvedValue({
-                data: { accessToken: 'new-access-token', refreshToken: 'rotated-refresh-token' }
-            });
+            refreshClient().post.mockResolvedValue({ data: { accessToken: 'new-access-token' } });
             instance.mockResolvedValue({ status: 200, data: 'retried' });
 
             const originalRequest: RequestConfig = { url: '/api/tasks', headers: {} };
@@ -104,12 +102,13 @@ describe('utils/axiosSetup', () => {
         /**
          * Was "stores the rotated refresh token". It must now do the opposite.
          *
-         * The server still rotates and still returns the new token in the body during the
-         * migration, so "we ignore it" needs pinning rather than assuming -- storing it would put
-         * the credential straight back into localStorage, which is the exposure being removed.
-         * The replacement arrives as a Set-Cookie header the browser handles on its own.
+         * The server no longer returns a refresh token in the body at all, so this fixture is a
+         * deliberately rogue response rather than a realistic one. It is kept precisely because of
+         * that: it pins that a field reappearing -- from a rolled-back server, or a future endpoint
+         * -- would still not be written to localStorage, which is the exposure being removed. The
+         * real replacement arrives as a Set-Cookie header the browser handles on its own.
          */
-        it('Does not store the rotated refresh token from the body', async () => {
+        it('Does not store a refresh token even if one appears in the body', async () => {
             refreshClient().post.mockResolvedValue({
                 data: { accessToken: 'new-access-token', refreshToken: 'rotated-refresh-token' }
             });

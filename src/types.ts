@@ -22,9 +22,11 @@ export interface PagedTasks {
   page: { totalPages: number };
 }
 
+// The refresh token is an httpOnly cookie the browser attaches itself, so it never appears in a
+// response body and this code cannot read it. A field for it here would describe a shape the server
+// does not send.
 export interface AuthTokens {
   accessToken: string;
-  refreshToken: string;
 }
 
 // Filter-bar state. status/priority are strings, not the enums — '' means "any".

@@ -34,7 +34,7 @@ describe('LoginForm.vue', () => {
 
     it('Logs in a user successfully', async () => {
         post.mockResolvedValue({
-            data: { accessToken: 'mockAccessToken', refreshToken: 'mockRefreshToken' }
+            data: { accessToken: 'mockAccessToken' }
         });
 
         const wrapper = mountForm();
@@ -58,7 +58,7 @@ describe('LoginForm.vue', () => {
 
     // setValue drives the inputs the way a user does, exercising the v-model bindings themselves.
     it('Posts the username and password typed into the fields', async () => {
-        post.mockResolvedValue({ data: { accessToken: 'a', refreshToken: 'r' } });
+        post.mockResolvedValue({ data: { accessToken: 'a' } });
 
         const wrapper = mountForm();
         const [username, password] = wrapper.findAll('input');
@@ -120,7 +120,7 @@ describe('LoginForm.vue', () => {
         expect(wrapper.find('[role="alert"]').exists()).toBe(true);
 
         post.mockResolvedValueOnce({
-            data: { accessToken: 'a', refreshToken: 'r' }
+            data: { accessToken: 'a' }
         });
         await wrapper.find('form').trigger('submit');
         await flushPromises();
