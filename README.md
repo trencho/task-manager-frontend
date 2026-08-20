@@ -22,8 +22,9 @@ TypeScript is pinned to **6.x**, not the newer 7.x: `typescript-eslint` supports
 is the newest version the whole toolchain (vue-tsc + typescript-eslint) agrees on. This mirrors the
 existing policy of holding tool majors until the ecosystem catches up.
 
-There is **no Vuex or Pinia store.** State lives in the components; the auth tokens live in
-`localStorage`, behind `src/utils/auth.ts`.
+There is **no Vuex or Pinia store.** State lives in the components; the **access token** lives in
+`localStorage`, behind `src/utils/auth.ts`. The refresh token does not — it is an `httpOnly`
+cookie the browser attaches on its own, which this code cannot read and neither can an attacker's.
 
 ## Setup
 
@@ -73,7 +74,7 @@ See [`.env.example`](.env.example).
 | `yarn preview` | Serve the built bundle locally |
 | `yarn lint` | ESLint |
 | `yarn type-check` | `vue-tsc` — type-checks `.ts` and `.vue` |
-| `yarn test` | Vitest, 89 tests |
+| `yarn test` | Vitest, 91 tests |
 | `yarn coverage` | Vitest + v8 coverage |
 
 CI runs `yarn install --immutable && yarn lint && yarn type-check && yarn test && yarn build` on every push and pull request.
@@ -105,7 +106,7 @@ src/
 │   ├── taskPriority.ts      LOW / MEDIUM / HIGH (+ TaskPriority type)
 │   └── taskFilters.ts       SORT_OPTIONS + emptyFilters()
 ├── utils/
-│   ├── auth.ts              access_token / refresh_token in localStorage
+│   ├── auth.ts              access_token in localStorage (the refresh token is an httpOnly cookie)
 │   ├── axiosSetup.ts        axios instance: Bearer header + 401 refresh-and-retry
 │   └── errorMessage.ts      maps an axios failure to display text for ErrorBanner
 └── tests/unit/              Vitest specs
@@ -118,13 +119,22 @@ src/
 
 ### Authentication flow
 
-`LoginForm` posts to `/api/auth/login` and stores the returned `accessToken` and `refreshToken`.
+`LoginForm` posts to `/api/auth/login` and stores **only** the returned `accessToken`. The refresh
+token arrives as a `Set-Cookie` on that same response — `httpOnly`, `SameSite=Strict`, scoped to
+`/api/auth` — so nothing in this codebase ever sees it.
+
 Every subsequent request goes through the axios instance in `utils/axiosSetup.ts`, which:
 
 1. attaches `Authorization: Bearer <accessToken>`;
-2. on a `401`, calls `/api/auth/refresh-token` once, stores the **new access token and the
-   rotated refresh token**, and replays the original request;
-3. clears both tokens if that refresh itself fails, and does not replay the request.
+2. on a `401`, calls `/api/auth/refresh-token` once **with no body**, stores the new access token,
+   and replays the original request. The browser supplies the refresh cookie; the rotated
+   replacement comes back as another `Set-Cookie`;
+3. clears the access token if that refresh itself fails, and does not replay the request.
+
+The instance sets `withCredentials`, which is what lets the browser keep the cookie on **login**
+and send it on **refresh**. Without it a cross-origin deployment (`VITE_API_URL`) drops the cookie
+silently: login looks successful and the first refresh signs the user out. A cross-origin
+deployment also needs the API to send `Access-Control-Allow-Credentials`.
 
 A request is only retried once — a second `401` for the same request rejects. The refresh call
 goes through a separate axios client with no interceptors, so a `401` from `/refresh-token`
@@ -136,8 +146,8 @@ cannot recurse back into the refresh handler.
 |---|---|
 | Register | `POST /api/auth/signup` |
 | Sign in | `POST /api/auth/login` |
-| Refresh | `POST /api/auth/refresh-token` (returns a rotated refresh token) |
-| Sign out | `POST /api/auth/logout` (revokes the refresh token) |
+| Refresh | `POST /api/auth/refresh-token` — no body; the cookie is the credential, and a rotated one comes back |
+| Sign out | `POST /api/auth/logout` — no body; revokes the refresh token and clears the cookie |
 | List | `GET /api/tasks` — paginated (`page`, `size`), with optional `q`, `status`, `priority`, `dueBefore`, and `sort` from the filter bar |
 | Create | `POST /api/tasks` |
 | Update | `PUT /api/tasks/{id}` |
@@ -149,7 +159,7 @@ cannot recurse back into the refresh handler.
 docker compose up --build
 ```
 
-Builds the bundle and serves it through nginx (`nginx.conf`). See [`README.Docker.md`](README.Docker.md).
+Builds the bundle and serves it through nginx (`nginx/default.conf.template`). See [`README.Docker.md`](README.Docker.md).
 
 ## Roadmap
 
