@@ -50,9 +50,11 @@ const login = async (): Promise<void> => {
       password: password.value
     });
     setAccessToken(response.data.accessToken);
-    // The refresh token is not stored: the server sets it as an httpOnly cookie on this response.
-    // It is still present in the body during the migration, and deliberately ignored - putting it
-    // into localStorage is exactly the exposure this change removes.
+    // The refresh token is not stored, and cannot be: the server sets it as an httpOnly cookie
+    // on THIS response, and stopped sending it in the body when the backend completed step 3 of
+    // the migration. That is why `axiosInstance` carries withCredentials -- without it the
+    // browser drops the Set-Cookie on a cross-origin deployment and the session dies at the
+    // first refresh.
     router.push('/tasks');
   } catch (err) {
     error.value = apiErrorMessage(err);
