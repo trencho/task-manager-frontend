@@ -105,11 +105,22 @@ jobs:
       # ============================================================================================
 
       # --- (A) Node / TypeScript ---
+      # corepack MUST be enabled BEFORE setup-node, not inside the install step: `cache: yarn`
+      # makes setup-node shell out to `yarn cache dir`, and the runner's preinstalled Yarn 1.x
+      # refuses to run in a repo declaring `packageManager: yarn@4`, so the cache step errors
+      # before the install has started. Enabling it below setup-node -- as this did -- means
+      # setup-node cannot resolve Berry's cache folder at all.
+      #
+      # This job is monthly, so its own entry is always evicted before the next run: the win is
+      # sharing ci.yml's cache, which only happens if this key matches CI's. It does -- ci.yml
+      # runs on `push`, so its cache is master-scoped and restorable from here, and both pin the
+      # same node-version.
+      - name: Enable Corepack
+        run: corepack enable
       - uses: actions/setup-node@v7
-        with: { node-version: '24' }
+        with: { node-version: '24', cache: 'yarn' }
       - name: Install dependencies (knip needs them resolved)
         run: |
-          corepack enable || true
           if [ -f yarn.lock ]; then yarn install --immutable
           elif [ -f pnpm-lock.yaml ]; then pnpm install --frozen-lockfile
           else npm ci; fi
