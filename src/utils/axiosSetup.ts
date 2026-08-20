@@ -10,7 +10,20 @@ type RetriableConfig = InternalAxiosRequestConfig & { _retry?: boolean };
 // proxy forwards them. Set VITE_API_URL at build time to point a deployed bundle at the API.
 const baseURL = import.meta.env.VITE_API_URL || '';
 
-const axiosInstance = axios.create({ baseURL });
+// withCredentials on the SHARED instance, not only on the calls that obviously need a cookie.
+//
+// Login is the request that ESTABLISHES the refresh cookie, and it goes through this instance.
+// Without this, `refreshClient` and the logout call each set withCredentials while login did not,
+// and a cross-origin deployment -- VITE_API_URL pointing at another origin, a documented and
+// supported mode -- silently discarded the Set-Cookie. Login looked successful, then the first
+// 401 refresh had no cookie to send and logged the user straight back out, with no error
+// anywhere. Same-origin it is a no-op, which is why nothing caught it.
+//
+// Setting it here rather than on the one call removes the asymmetry that caused the bug instead
+// of patching the one instance of it. Cross-origin ALSO needs the backend to send
+// Access-Control-Allow-Credentials with a concrete origin; that half lives in
+// task-manager-backend, which configures no CORS at all today.
+const axiosInstance = axios.create({ baseURL, withCredentials: true });
 
 // A separate client for the refresh call. It shares the baseURL but carries no interceptors,
 // so a 401 from /refresh-token cannot recurse back into the refresh handler. Using the bare

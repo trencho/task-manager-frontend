@@ -57,6 +57,27 @@ describe('utils/axiosSetup', () => {
         instance.mockReset();
     });
 
+    /*
+     * The refresh cookie is httpOnly, so nothing here can observe whether it was stored -- the
+     * only testable thing is whether the browser was TOLD to keep it. That is `withCredentials`,
+     * and it has to be set on the client that performs the LOGIN, because login is the request
+     * the Set-Cookie arrives on.
+     *
+     * It was missing there: refreshClient and the logout call each set it and the shared instance
+     * did not. Same-origin that is a no-op, so every test and every local run passed; a
+     * cross-origin deployment dropped the cookie and the session died at the first refresh, with
+     * no error anywhere. Asserting on BOTH create() calls is what stops the asymmetry returning.
+     */
+    describe('client configuration', () => {
+        it('Creates the shared instance with credentials, so login can set the refresh cookie', () => {
+            expect(mockedCreate.mock.calls[0][0]).toMatchObject({ withCredentials: true });
+        });
+
+        it('Creates the refresh client with credentials too', () => {
+            expect(mockedCreate.mock.calls[1][0]).toMatchObject({ withCredentials: true });
+        });
+    });
+
     describe('request interceptor', () => {
         it('Attaches the access token as a Bearer header', () => {
             setAccessToken('access-1');
@@ -141,6 +162,28 @@ describe('utils/axiosSetup', () => {
             const error: ErrorLike = { response: { status: 401 }, config: { headers: {} } };
 
             await expect(onResponseError()(error)).rejects.toBe(error);
+            expect(instance).not.toHaveBeenCalled();
+        });
+
+        /*
+         * A 200 carrying no access token is a broken contract, not a refreshed session -- the old
+         * response shape made it impossible and the cookie-based one does not. Without this the
+         * throw is unreachable by any test, and it is exactly the branch that took statement
+         * coverage from 99.19% to 98.74% when it was added.
+         *
+         * The session must be cleared rather than left holding a token the server has rotated
+         * away from: a silent no-op here would retry forever against a dead session.
+         */
+        it('Treats a 200 with no access token as a failed refresh', async () => {
+            setAccessToken('access-1');
+            refreshClient().post.mockResolvedValue({ data: {} });
+            vi.spyOn(console, 'error').mockImplementation(() => {
+            });
+
+            const error: ErrorLike = { response: { status: 401 }, config: { headers: {} } };
+            await expect(onResponseError()(error)).rejects.toBe(error);
+
+            expect(localStorage.getItem('access_token')).toBeNull();
             expect(instance).not.toHaveBeenCalled();
         });
 
