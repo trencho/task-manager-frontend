@@ -76,6 +76,14 @@ describe('TaskList.vue', () => {
         expect(nextButton.attributes('disabled')).toBeDefined();
     });
 
+    it('Enables both pagination buttons on a middle page', () => {
+        const wrapper = mountList({page: 1, totalPages: 3});
+        const [previous, next] = wrapper.findAll('.pagination button');
+
+        expect(previous.attributes('disabled')).toBeUndefined();
+        expect(next.attributes('disabled')).toBeUndefined();
+    });
+
     it('Emits change-page with the neighbouring page', async () => {
         const wrapper = mountList({page: 1, totalPages: 3});
         const [previous, next] = wrapper.findAll('.pagination button');
