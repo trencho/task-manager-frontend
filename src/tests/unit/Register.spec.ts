@@ -75,6 +75,22 @@ describe('RegisterForm.vue', () => {
         expect(wrapper.find('[role="alert"]').text()).toContain('Username already taken');
     });
 
+    it('Clears the error when the banner is dismissed', async () => {
+        // The @dismiss handler in RegisterForm.vue is `error = ''`, and nothing exercised it here.
+        // Login.spec covers the same wiring in its own consumer; a banner that raised the event
+        // while the parent ignored it would look identical to a working one until a user clicked.
+        post.mockRejectedValue({ response: { data: 'Username already taken' } });
+
+        const wrapper = mountForm();
+        await wrapper.find('form').trigger('submit');
+        await flushPromises();
+        expect(wrapper.find('[role="alert"]').exists()).toBe(true);
+
+        await wrapper.find('.error-banner__dismiss').trigger('click');
+
+        expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    });
+
     it('Joins the validation failures the backend returns as an array', async () => {
         post.mockRejectedValue({
             response: { data: ['email: Email is required', 'password: too short'] }

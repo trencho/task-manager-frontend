@@ -206,6 +206,21 @@ describe('views/TaskManagerView.vue', () => {
         expect(wrapper.find('[role="alert"]').text()).toContain(expected);
     });
 
+    it('Clears the error when the banner is dismissed', async () => {
+        // The @dismiss handler in TaskManagerView.vue is `error = ''`. This was the third consumer
+        // of ErrorBanner and the second with no test for it: the banner could emit into a parent
+        // that ignored the event and nothing would have failed until a user clicked.
+        api.get.mockRejectedValue(new Error('Network Error'));
+
+        const wrapper = mount(TaskManagerView);
+        await flushPromises();
+        expect(wrapper.find('[role="alert"]').exists()).toBe(true);
+
+        await wrapper.find('.error-banner__dismiss').trigger('click');
+
+        expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    });
+
     it('Renders a message rather than crashing when the API is unreachable', async () => {
         api.get.mockRejectedValue(new Error('Network Error'));
 
