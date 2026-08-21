@@ -43,10 +43,13 @@ jobs:
       - name: Type-check
         run: yarn type-check
 
-      # This suite once silently ran ZERO tests for months: jest resolved
-      # testEnvironment 'jsdom' to a jest-environment-jsdom major that its constructor
-      # could not load, every suite failed to load, and nobody ran it. Jest exits
-      # non-zero when no tests are found, so CI is the guard against that recurring.
+      # Why this is its own gate: the suite once silently ran ZERO tests for months. That was
+      # under Jest -- it resolved testEnvironment 'jsdom' to a jest-environment-jsdom major its
+      # constructor could not load, every suite failed to load, and nobody ran it. The history is
+      # kept because it is what justifies the gate; the runner is not.
+      #
+      # Vitest now: it exits non-zero when no test files match, so the same collapse is caught
+      # here rather than passing as an empty green run.
       - name: Test
         run: yarn test
 
