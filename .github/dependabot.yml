@@ -13,6 +13,21 @@ updates:
       prefix: chore
       include: scope
     groups:
+      # vitest and its coverage provider peer each other at an EXACT version -- @vitest/coverage-v8
+      # requests `vitest: "5.0.0"`, not a range -- so they have to move in the same PR on every
+      # release, majors included. This group is listed FIRST and carries no update-types filter,
+      # because a group that omits the filter takes every update type; minor-and-patch below would
+      # otherwise leave the major path ungrouped, which is the case that splits them.
+      #
+      # What a split costs, measured on 2026-09-06 rather than assumed: Yarn reports the unmet
+      # exact peer as YN0060/YN0086 WARNINGS, so `yarn install --immutable` exits 0, and lint,
+      # type-check, test and build all pass. Only `yarn coverage` fails, reporting 0% of 239
+      # statements -- and that was the one command CI did not run. The Test step now runs coverage
+      # for that reason; the two fixes are deliberate belt and braces.
+      vitest:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
       # One PR per week for the routine bumps, instead of five that each need a CI run.
       minor-and-patch:
         update-types: [minor, patch]
