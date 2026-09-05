@@ -50,8 +50,14 @@ jobs:
       #
       # Vitest now: it exits non-zero when no test files match, so the same collapse is caught
       # here rather than passing as an empty green run.
+      #
+      # This runs `coverage` rather than `test`. Same 94 tests, and it additionally exercises the
+      # coverage provider, which nothing else here does. Measured on 2026-09-06: with vitest and
+      # @vitest/coverage-v8 on different majors, install (even --immutable), lint, type-check,
+      # test and build ALL pass while `yarn coverage` fails and reports 0% of 239 statements. The
+      # one command that could see the breakage was the one command CI did not run.
       - name: Test
-        run: yarn test
+        run: yarn coverage
 
       - name: Build
         run: yarn build

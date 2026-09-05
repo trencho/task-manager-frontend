@@ -1,4 +1,4 @@
-# Task Manager — Vue 3 SPA
+# Task Manager: Vue 3 SPA
 
 A single-page task manager. Register, sign in, and manage your own tasks. The client for
 [task-manager-backend](https://github.com/trencho/task-manager-backend), a Spring Boot JWT API.
@@ -23,7 +23,7 @@ is the newest version the whole toolchain (vue-tsc + typescript-eslint) agrees o
 existing policy of holding tool majors until the ecosystem catches up.
 
 There is **no Vuex or Pinia store.** State lives in the components; the **access token** lives in
-`localStorage`, behind `src/utils/auth.ts`. The refresh token does not — it is an `httpOnly`
+`localStorage`, behind `src/utils/auth.ts`. The refresh token does not: it is an `httpOnly`
 cookie the browser attaches on its own, which this code cannot read and neither can an attacker's.
 
 ## Setup
@@ -36,18 +36,18 @@ yarn install --immutable   # installs exactly the committed lockfile
 ```
 
 Yarn is managed by [Corepack](https://nodejs.org/api/corepack.html) (bundled with Node), so the
-exact Yarn version comes from `package.json`'s `packageManager` field — no global install needed.
-Use `yarn install --immutable`, not a plain `yarn install` — it fails when `package.json` and
+exact Yarn version comes from `package.json`'s `packageManager` field, so no global install is needed.
+Use `yarn install --immutable`, not a plain `yarn install`. It fails when `package.json` and
 `yarn.lock` disagree instead of quietly rewriting the lockfile.
 
 ## Configuration
 
 The backend URL comes from `VITE_API_URL`. Only `VITE_`-prefixed variables reach the bundle, and
-**whatever you put there is compiled into the published JavaScript** — never place a secret in it.
+**whatever you put there is compiled into the published JavaScript**. Never place a secret in it.
 
 Leave it empty (the default) and the app issues **same-origin relative requests** to `/api/...`.
 In development the Vite dev server proxies those to `VITE_DEV_PROXY_TARGET`, which defaults to
-`http://localhost:80` — the backend's default port. In the Docker image, nginx proxies them to
+`http://localhost:80`, the backend's default port. In the Docker image, nginx proxies them to
 `BACKEND_URL`. Set `VITE_API_URL` only to point a bundle at a *different* origin, which then
 needs CORS on the backend.
 
@@ -73,11 +73,13 @@ See [`.env.example`](.env.example).
 | `yarn build` | Production bundle into `dist/` |
 | `yarn preview` | Serve the built bundle locally |
 | `yarn lint` | ESLint |
-| `yarn type-check` | `vue-tsc` — type-checks `.ts` and `.vue` |
-| `yarn test` | Vitest, 91 tests |
+| `yarn type-check` | `vue-tsc`, which type-checks `.ts` and `.vue` |
+| `yarn test` | Vitest, 94 tests |
 | `yarn coverage` | Vitest + v8 coverage |
 
-CI runs `yarn install --immutable && yarn lint && yarn type-check && yarn test && yarn build` on every push and pull request.
+CI runs `yarn install --immutable && yarn lint && yarn type-check && yarn coverage && yarn build`
+on every push and pull request. It runs `coverage` rather than `test` so the coverage provider is
+exercised too: the two are otherwise the same 94 tests, and a broken provider passes `yarn test`.
 See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 ## Architecture
@@ -120,8 +122,8 @@ src/
 ### Authentication flow
 
 `LoginForm` posts to `/api/auth/login` and stores **only** the returned `accessToken`. The refresh
-token arrives as a `Set-Cookie` on that same response — `httpOnly`, `SameSite=Strict`, scoped to
-`/api/auth` — so nothing in this codebase ever sees it.
+token arrives as a `Set-Cookie` on that same response, marked `httpOnly` and `SameSite=Strict`
+and scoped to `/api/auth`, so nothing in this codebase ever sees it.
 
 Every subsequent request goes through the axios instance in `utils/axiosSetup.ts`, which:
 
@@ -136,7 +138,7 @@ and send it on **refresh**. Without it a cross-origin deployment (`VITE_API_URL`
 silently: login looks successful and the first refresh signs the user out. A cross-origin
 deployment also needs the API to send `Access-Control-Allow-Credentials`.
 
-A request is only retried once — a second `401` for the same request rejects. The refresh call
+A request is only retried once; a second `401` for the same request rejects. The refresh call
 goes through a separate axios client with no interceptors, so a `401` from `/refresh-token`
 cannot recurse back into the refresh handler.
 
@@ -146,9 +148,9 @@ cannot recurse back into the refresh handler.
 |---|---|
 | Register | `POST /api/auth/signup` |
 | Sign in | `POST /api/auth/login` |
-| Refresh | `POST /api/auth/refresh-token` — no body; the cookie is the credential, and a rotated one comes back |
-| Sign out | `POST /api/auth/logout` — no body; revokes the refresh token and clears the cookie |
-| List | `GET /api/tasks` — paginated (`page`, `size`), with optional `q`, `status`, `priority`, `dueBefore`, and `sort` from the filter bar |
+| Refresh | `POST /api/auth/refresh-token`, no body; the cookie is the credential, and a rotated one comes back |
+| Sign out | `POST /api/auth/logout`, no body; revokes the refresh token and clears the cookie |
+| List | `GET /api/tasks`, paginated (`page`, `size`), with optional `q`, `status`, `priority`, `dueBefore`, and `sort` from the filter bar |
 | Create | `POST /api/tasks` |
 | Update | `PUT /api/tasks/{id}` |
 | Delete | `DELETE /api/tasks/{id}` |
@@ -163,7 +165,7 @@ Builds the bundle and serves it through nginx (`nginx/default.conf.template`). S
 
 ## Roadmap
 
-No open roadmap items — every feature this README describes is implemented.
+No open roadmap items. Every feature this README describes is implemented.
 
 A Pinia/Vuex store is deliberately **not** on the roadmap: state stays component-local until it needs
 to be shared beyond the auth tokens (see "There is no Vuex or Pinia store" above). If that need
