@@ -58,7 +58,11 @@ COPY --from=build /usr/src/app/dist /usr/share/nginx/html
 # The template listens on 80; docker-compose maps 8080:80.
 EXPOSE 80
 
+# 127.0.0.1, not localhost. In this image `localhost` resolves to ::1 ONLY, while the template
+# says `listen 80;` so nginx binds 0.0.0.0:80 -- the probe dialled an address nothing was listening
+# on, and the container reported `unhealthy` forever. Measured on both 1.30-alpine and 1.31-alpine,
+# so it was never about the base image.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
-    CMD wget -qO /dev/null http://localhost/ || exit 1
+    CMD wget -qO /dev/null http://127.0.0.1/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
