@@ -61,3 +61,14 @@ jobs:
 
       - name: Build
         run: yarn build
+
+      # The Dockerfile is the one artifact nothing here exercised. `yarn build` proves the bundle
+      # compiles; it says nothing about whether an image can be produced from it. The sibling backend
+      # shipped a Dockerfile that could not build at all for months for exactly that reason -- a flag
+      # its base image had removed -- and no test, lint or build step could have seen it.
+      #
+      # No push and no registry login: this repo publishes no images. The step exists so a broken
+      # Dockerfile fails on the PR that breaks it rather than the next time someone needs an image.
+      # VITE_API_URL is left unset on purpose, which is the same-origin default the README documents.
+      - name: Build the container image
+        run: docker build -t task-manager-vue:ci .
