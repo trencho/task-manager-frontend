@@ -102,12 +102,11 @@ updates:
     # branch change, and it scores as an ordinary MINOR -- the same shape as the node:24 -> node:26
     # bump above.
     #
-    # This repo is on `1.31-alpine`, which is MAINLINE. It got there by auto-merging exactly that
-    # bump in July, while the sibling frontend declined the identical PR and wrote down why. The
-    # hold is set at `>=1.33` rather than `>=1.32` on purpose: 1.32 is the next STABLE minor, so
-    # letting it through moves the serve stage back onto the stable branch by itself, and 1.33 --
-    # the mainline after it -- is where the block belongs. Patches inside the current line arrive by
-    # tag movement and are unaffected either way.
+    # This repo served from `1.31-alpine` -- MAINLINE -- between 2026-07-11 and 2026-09-06. It got
+    # there by auto-merging exactly that bump, while the sibling frontend declined the identical PR
+    # and wrote down why. The serve stage is back on `1.30-alpine` and the hold blocks `>=1.31`, so
+    # the branch it sits on is now the one the config says it should be on. Patches inside 1.30
+    # arrive by tag movement and are unaffected.
     #
     # `ignore.versions` takes version RANGES rather than globs, so "odd minors" is inexpressible;
     # holding above the next stable minor is the same rule in a form the config has.
@@ -115,10 +114,10 @@ updates:
       # lift-when: eol-lts nodejs 26
       - dependency-name: "node"
         versions: [">=25"]
-      # lift-when: manual nginx 1.34 (the stable minor after the one this lets through) is released;
-      # at that point confirm the serve stage is on 1.32-alpine and re-set this hold to >=1.35.
+      # lift-when: manual nginx 1.32 (the next STABLE, even-numbered minor) is released; then move
+      # the Dockerfile to 1.32-alpine and re-set this hold to >=1.33.
       - dependency-name: "nginx"
-        versions: [">=1.33"]
+        versions: [">=1.31"]
 
   # Compose files -- a SEPARATE ecosystem from `docker`, which does NOT cover them. Before this
   # block existed the image tags in these files were updated by nothing at all, because

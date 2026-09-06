@@ -39,7 +39,12 @@ RUN yarn build
 
 ################################################################################
 # Serve the static bundle. nginx:alpine already runs as a non-root worker.
-FROM nginx:1.31-alpine AS final
+#
+# 1.30 is nginx's STABLE branch: it numbers stable with even minors and mainline with odd, so
+# 1.31 is not a newer 1.30, it is the development line. This served from 1.31-alpine between
+# 2026-07-11 and 2026-09-06 because a docker tag carries no channel metadata and the bump scored
+# as an ordinary minor. See the nginx hold in .github/dependabot.yml.
+FROM nginx:1.30-alpine AS final
 
 # Rendered into /etc/nginx/conf.d/default.conf at container start. A default is essential:
 # an unset BACKEND_URL renders `proxy_pass ;` and nginx refuses to start.
