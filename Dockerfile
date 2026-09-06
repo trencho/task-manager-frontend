@@ -39,7 +39,12 @@ RUN yarn build
 
 ################################################################################
 # Serve the static bundle. nginx:alpine already runs as a non-root worker.
-FROM nginx:1.31-alpine AS final
+#
+# 1.30 is nginx's STABLE branch: it numbers stable with even minors and mainline with odd, so
+# 1.31 is not a newer 1.30, it is the development line. This served from 1.31-alpine between
+# 2026-07-11 and 2026-09-06 because a docker tag carries no channel metadata and the bump scored
+# as an ordinary minor. See the nginx hold in .github/dependabot.yml.
+FROM nginx:1.30-alpine AS final
 
 # Rendered into /etc/nginx/conf.d/default.conf at container start. A default is essential:
 # an unset BACKEND_URL renders `proxy_pass ;` and nginx refuses to start.
@@ -53,7 +58,11 @@ COPY --from=build /usr/src/app/dist /usr/share/nginx/html
 # The template listens on 80; docker-compose maps 8080:80.
 EXPOSE 80
 
+# 127.0.0.1, not localhost. In this image `localhost` resolves to ::1 ONLY, while the template
+# says `listen 80;` so nginx binds 0.0.0.0:80 -- the probe dialled an address nothing was listening
+# on, and the container reported `unhealthy` forever. Measured on both 1.30-alpine and 1.31-alpine,
+# so it was never about the base image.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
-    CMD wget -qO /dev/null http://localhost/ || exit 1
+    CMD wget -qO /dev/null http://127.0.0.1/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
