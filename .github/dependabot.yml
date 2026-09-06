@@ -89,11 +89,36 @@ updates:
     # an LTS major from a Current one -- node:24 -> node:26 scored an ordinary major and merged a
     # NON-LTS runtime into this image on 2026-08-16, two months before Node 26's LTS date, with CI
     # green because CI was still installing Node 24. Major-only: patches within the 24 line still
-    # flow. nginx is deliberately NOT held -- it has its own support policy, not an LTS line.
+    # flow.
+    #
+    # SECOND CARVE-OUT, added 2026-09-06. This block used to say nginx was "deliberately NOT held --
+    # it has its own support policy, not an LTS line". The first half is true and the conclusion did
+    # not follow: nginx has no LTS line, but it does run TWO branches at once, and a docker tag
+    # cannot tell them apart any more than it can tell an LTS major from a Current one.
+    #
+    # nginx numbers its STABLE branch with EVEN minors and its MAINLINE branch with ODD ones
+    # (nginx.org/en/download.html: 1.24.0, 1.26.3, 1.28.3, 1.30.4 are the settled stable series;
+    # 1.31.5 is the live mainline). So `1.30-alpine` -> `1.31-alpine` is not an upgrade, it is a
+    # branch change, and it scores as an ordinary MINOR -- the same shape as the node:24 -> node:26
+    # bump above.
+    #
+    # This repo is on `1.31-alpine`, which is MAINLINE. It got there by auto-merging exactly that
+    # bump in July, while the sibling frontend declined the identical PR and wrote down why. The
+    # hold is set at `>=1.33` rather than `>=1.32` on purpose: 1.32 is the next STABLE minor, so
+    # letting it through moves the serve stage back onto the stable branch by itself, and 1.33 --
+    # the mainline after it -- is where the block belongs. Patches inside the current line arrive by
+    # tag movement and are unaffected either way.
+    #
+    # `ignore.versions` takes version RANGES rather than globs, so "odd minors" is inexpressible;
+    # holding above the next stable minor is the same rule in a form the config has.
     ignore:
       # lift-when: eol-lts nodejs 26
       - dependency-name: "node"
         versions: [">=25"]
+      # lift-when: manual nginx 1.34 (the stable minor after the one this lets through) is released;
+      # at that point confirm the serve stage is on 1.32-alpine and re-set this hold to >=1.35.
+      - dependency-name: "nginx"
+        versions: [">=1.33"]
 
   # Compose files -- a SEPARATE ecosystem from `docker`, which does NOT cover them. Before this
   # block existed the image tags in these files were updated by nothing at all, because
