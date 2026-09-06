@@ -27,15 +27,12 @@
 </template>
 
 <script setup lang="ts">
-// The shared instance, not bare axios: only it carries the configured baseURL, so a bundle built
-// with VITE_API_URL was posting to the wrong origin from this form alone.
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import ErrorBanner from '@/components/ErrorBanner.vue';
+import { login as loginRequest } from '@/api/auth';
 import { setAccessToken } from '@/utils/auth';
-import axiosInstance from '@/utils/axiosSetup';
 import { apiErrorMessage } from '@/utils/errorMessage';
-import type { AuthTokens } from '@/types';
 
 const router = useRouter();
 const username = ref('');
@@ -45,7 +42,7 @@ const error = ref('');
 const login = async (): Promise<void> => {
   error.value = '';
   try {
-    const response = await axiosInstance.post<AuthTokens>('/api/auth/login', {
+    const response = await loginRequest({
       username: username.value,
       password: password.value
     });

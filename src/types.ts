@@ -11,6 +11,10 @@ export interface Task {
   dueDate: string;
   status: TaskStatus;
   priority: TaskPriority;
+  // Optional because the server sends null for a task carrying none. Sending an empty array is
+  // NOT the same thing: the backend treats an absent tags field as leave-alone and an empty one
+  // as clear, so a client that always sends [] wipes the tags of every task it edits.
+  tags?: string[];
 }
 
 // A task being created or edited in the form — no server id yet.
@@ -36,4 +40,6 @@ export interface Filters {
   priority: string;
   dueBefore: string;
   sort: string;
+  // Exact match on the server, not a substring: "work" must not select "homework".
+  tag: string;
 }

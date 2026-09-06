@@ -25,26 +25,25 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import axiosInstance from '@/utils/axiosSetup';
 import ErrorBanner from '@/components/ErrorBanner.vue';
 import TaskFilters from '@/components/TaskFilters.vue';
 import TaskForm from '@/components/TaskForm.vue';
 import TaskList from '@/components/TaskList.vue';
 import LogoutButton from '@/components/LogoutButton.vue';
+import * as tasksApi from '@/api/tasks';
 import { emptyFilters } from '@/constants/taskFilters';
 import { DEFAULT_TASK_PRIORITY } from '@/constants/taskPriority';
 import { DEFAULT_TASK_STATUS } from '@/constants/taskStatus';
 import { apiErrorMessage } from '@/utils/errorMessage';
-import type { Filters, NewTask, PagedTasks, Task } from '@/types';
-
-const PAGE_SIZE = 10;
+import type { Filters, NewTask, Task } from '@/types';
 
 const emptyTask = (): NewTask => ({
   title: '',
   description: '',
   dueDate: '',
   status: DEFAULT_TASK_STATUS,
-  priority: DEFAULT_TASK_PRIORITY
+  priority: DEFAULT_TASK_PRIORITY,
+  tags: []
 });
 
 const tasks = ref<Task[]>([]);
@@ -57,25 +56,10 @@ const totalPages = ref(0);
 const error = ref('');
 const filters = ref<Filters>(emptyFilters());
 
-/**
- * Empty filters are omitted entirely. Sending `status=` would bind to an empty TaskStatus on
- * the backend and fail conversion, and URLSearchParams encodes the rest, so a search for
- * "a&b" cannot inject a parameter.
- */
-const buildQuery = (targetPage: number): string => {
-  const params = new URLSearchParams({ page: String(targetPage), size: String(PAGE_SIZE) });
-  for (const [key, value] of Object.entries(filters.value)) {
-    if (value !== '' && value !== null && value !== undefined) {
-      params.set(key, value);
-    }
-  }
-  return params.toString();
-};
-
 const fetchTasks = async (targetPage = 0): Promise<void> => {
   error.value = '';
   try {
-    const response = await axiosInstance.get<PagedTasks>(`/api/tasks?${buildQuery(targetPage)}`);
+    const response = await tasksApi.listTasks(filters.value, targetPage);
     tasks.value = response.data.content;
     page.value = targetPage;
     totalPages.value = response.data.page.totalPages;
@@ -104,7 +88,7 @@ const resetForm = (): void => {
 const createTask = async (task: NewTask | Task): Promise<void> => {
   error.value = '';
   try {
-    await axiosInstance.post('/api/tasks', task);
+    await tasksApi.createTask(task);
     resetForm();
     // Refetch rather than push the new task onto the list. Pushing appended an eleventh row
     // to a ten-row page, and would now also show a task the active filter excludes.
@@ -117,7 +101,7 @@ const createTask = async (task: NewTask | Task): Promise<void> => {
 const updateTask = async (task: NewTask | Task): Promise<void> => {
   error.value = '';
   try {
-    await axiosInstance.put(`/api/tasks/${(task as Task).id}`, task);
+    await tasksApi.updateTask((task as Task).id, task);
     resetForm();
     fetchTasks(page.value);
   } catch (err) {
@@ -136,7 +120,7 @@ const handleTaskSubmit = async (task: NewTask | Task): Promise<void> => {
 const deleteTask = async (id: string): Promise<void> => {
   error.value = '';
   try {
-    await axiosInstance.delete(`/api/tasks/${id}`);
+    await tasksApi.deleteTask(id);
     fetchTasks(page.value);
   } catch (err) {
     error.value = apiErrorMessage(err);
@@ -144,7 +128,10 @@ const deleteTask = async (id: string): Promise<void> => {
 };
 
 const editTask = (task: Task): void => {
-  currentTask.value = { ...task };
+  // tags is copied rather than shared: a shallow spread hands the form the SAME array the row in
+  // the list renders, so typing in the tag box would rewrite the list under the user before
+  // anything was submitted.
+  currentTask.value = { ...task, tags: [...(task.tags ?? [])] };
   isEditing.value = true;
 };
 

@@ -44,7 +44,16 @@ export default defineConfig({
         coverage: {
             provider: 'v8',
             include: ['src/**/*.{ts,vue}'],
-            exclude: ['src/tests/**', 'src/main.ts', 'src/env.d.ts', 'src/types.ts']
+            exclude: ['src/tests/**', 'src/main.ts', 'src/env.d.ts', 'src/types.ts'],
+            // Pinned at what the suite already achieves. Without a threshold, "100% covered" is a
+            // number someone reads in the output; with one it is a condition the run has to meet.
+            // CI runs `yarn coverage` rather than `yarn test`, so the threshold has a runner.
+            thresholds: {
+                statements: 100,
+                branches: 100,
+                functions: 100,
+                lines: 100
+            }
         }
     }
 });

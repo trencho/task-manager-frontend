@@ -8,6 +8,8 @@ const tasks: Task[] = [
     {id: '2', title: 'Second', description: 'desc two', dueDate: '2026-02-01', status: 'COMPLETED', priority: 'HIGH'}
 ];
 
+const tagged = (tags: string[] | undefined): Task[] => [{...tasks[0], tags}];
+
 const mountList = (props: Partial<{ tasks: Task[]; page: number; totalPages: number }> = {}) =>
     shallowMount(TaskList, {
         props: {tasks, page: 0, totalPages: 2, ...props}
@@ -40,6 +42,21 @@ describe('TaskList.vue', () => {
 
         expect(wrapper.text()).toContain('No tasks available.');
         expect(wrapper.find('.pagination').exists()).toBe(false);
+    });
+
+    it('Renders one chip per tag', () => {
+        const wrapper = mountList({tasks: tagged(['work', 'urgent'])});
+
+        expect(wrapper.findAll('.task-tag').map((t) => t.text())).toEqual(['work', 'urgent']);
+    });
+
+    /**
+     * The server sends no tags field at all for a task that has none, and a task fetched before
+     * this feature existed has none either. Rendering must not depend on the field being there.
+     */
+    it('Renders no chips for a task with no tags', () => {
+        expect(mountList({tasks: tagged(undefined)}).findAll('.task-tag')).toHaveLength(0);
+        expect(mountList({tasks: tagged([])}).findAll('.task-tag')).toHaveLength(0);
     });
 
     it('Emits edit-task with the task that was clicked', async () => {

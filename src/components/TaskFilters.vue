@@ -50,6 +50,15 @@
       </select>
     </div>
     <div>
+      <label for="filter-tag">Tag:</label>
+      <input
+        id="filter-tag"
+        v-model="draft.tag"
+        type="text"
+        placeholder="Exact tag"
+      >
+    </div>
+    <div>
       <label for="filter-due-before">Due before:</label>
       <input
         id="filter-due-before"

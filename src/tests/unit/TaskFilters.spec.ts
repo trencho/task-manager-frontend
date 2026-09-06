@@ -7,7 +7,7 @@ describe('components/TaskFilters.vue', () => {
     const mountFilters = () => mount(TaskFilters);
 
     it('Starts with every filter empty', () => {
-        expect(emptyFilters()).toEqual({ q: '', status: '', priority: '', dueBefore: '', sort: '' });
+        expect(emptyFilters()).toEqual({ q: '', status: '', priority: '', dueBefore: '', sort: '', tag: '' });
     });
 
     it('Offers an "Any" choice for status and priority, so a filter can be cleared', () => {
@@ -53,6 +53,7 @@ describe('components/TaskFilters.vue', () => {
         await wrapper.find('#filter-priority').setValue('HIGH');
         await wrapper.find('#filter-due-before').setValue('2026-07-15');
         await wrapper.find('#filter-sort').setValue('dueDate,asc');
+        await wrapper.find('#filter-tag').setValue('work');
         await wrapper.find('form').trigger('submit');
 
         expect(wrapper.emitted('apply')![0][0]).toEqual({
@@ -60,8 +61,23 @@ describe('components/TaskFilters.vue', () => {
             status: 'COMPLETED',
             priority: 'HIGH',
             dueBefore: '2026-07-15',
-            sort: 'dueDate,asc'
+            sort: 'dueDate,asc',
+            tag: 'work'
         });
+    });
+
+    /**
+     * The backend has served ?tag= since tags shipped and no client ever sent one. The filter is
+     * a plain text box rather than a select because the tag vocabulary is whatever the user typed
+     * into their own tasks; there is no endpoint that enumerates it.
+     */
+    it('Emits the tag on its own, without dragging the other filters along', async () => {
+        const wrapper = mountFilters();
+
+        await wrapper.find('#filter-tag').setValue('urgent');
+        await wrapper.find('form').trigger('submit');
+
+        expect(wrapper.emitted('apply')![0][0]).toEqual({ ...emptyFilters(), tag: 'urgent' });
     });
 
     it('Emits a copy, so the parent cannot mutate the draft through it', async () => {

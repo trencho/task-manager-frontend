@@ -16,5 +16,6 @@ export const emptyFilters = (): Filters => ({
   status: '',
   priority: '',
   dueBefore: '',
-  sort: ''
+  sort: '',
+  tag: ''
 });
