@@ -92,6 +92,19 @@ describe('TaskForm.vue', () => {
         expect((wrapper.find('#task-tags').element as HTMLInputElement).value).toBe('home');
     });
 
+    /**
+     * The server rejects a two-character title with a 400. These attributes are what stop the
+     * round trip; the server stays the authority, so the bounds must match it exactly.
+     */
+    it('Enforces the length bounds the server enforces on title and description', () => {
+        const wrapper = mountForm();
+        const title = wrapper.find('input');
+
+        expect(title.attributes('minlength')).toBe('3');
+        expect(title.attributes('maxlength')).toBe('50');
+        expect(wrapper.find('textarea').attributes('maxlength')).toBe('200');
+    });
+
     it('Labels the button by mode', () => {
         expect(mountForm({}, false).find('button').text()).toContain('Create');
         expect(mountForm({}, true).find('button').text()).toContain('Update');

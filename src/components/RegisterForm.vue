@@ -10,6 +10,8 @@
         v-model="username"
         type="username"
         required
+        minlength="3"
+        maxlength="30"
       >
     </div>
     <div>
@@ -26,6 +28,7 @@
         v-model="password"
         type="password"
         required
+        minlength="8"
       >
     </div>
     <button type="submit">

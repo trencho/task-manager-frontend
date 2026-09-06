@@ -5,11 +5,16 @@
       <input
         v-model="task.title"
         required
+        minlength="3"
+        maxlength="50"
       >
     </div>
     <div>
       <label>Description:</label>
-      <textarea v-model="task.description" />
+      <textarea
+        v-model="task.description"
+        maxlength="200"
+      />
     </div>
     <div>
       <label>Due Date:</label>

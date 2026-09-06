@@ -25,6 +25,23 @@ describe('RegisterForm.vue', () => {
     // would still satisfy these assertions.
     const mountForm = () => mount(RegisterForm);
 
+    /**
+     * Bounds copied from UserRegistrationDTO. The server stays the authority -- these only save
+     * the user a round trip that ends in a 400 they could have been told about before submitting.
+     *
+     * Asserted across all three fields at once rather than field by field, so the middle one is
+     * covered too: the server constrains it by format and not by length, and a maxlength that
+     * appeared there would be a bound nothing on the server agrees with.
+     */
+    it('Enforces the bounds the server enforces, and no others', () => {
+        const bounds = mountForm().findAll('input')
+            .map((field) => [field.attributes('minlength'), field.attributes('maxlength')]);
+
+        // In render order: the identifier field 3-30, the address field unbounded, the secret
+        // field at least 8 with no upper limit.
+        expect(bounds).toEqual([['3', '30'], [undefined, undefined], ['8', undefined]]);
+    });
+
     it('Registers a user successfully', async () => {
         post.mockResolvedValue({ data: 'User registered successfully!' });
 
