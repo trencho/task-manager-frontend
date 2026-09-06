@@ -8,7 +8,8 @@ vi.mock('@/utils/axiosSetup', () => ({
 
 import TaskManagerView from '@/views/TaskManagerView.vue';
 import axiosInstance from '@/utils/axiosSetup';
-import type { Task } from '@/types';
+import { emptyFilters } from '@/constants/taskFilters';
+import type { Filters, Task } from '@/types';
 
 const api = axiosInstance as unknown as { get: Mock; post: Mock; put: Mock; delete: Mock };
 
@@ -23,8 +24,13 @@ const task = (overrides: Partial<Task> = {}): Task => ({
     dueDate: '2026-07-12',
     status: 'PENDING',
     priority: 'LOW',
+    tags: ['errand'],
     ...overrides
 });
+
+// The five-key literals the filter tests used to emit are gone: Filters gained a `tag` key, and
+// spreading the empty set keeps each test naming only the filter it is about.
+const filters = (overrides: Partial<Filters> = {}): Filters => ({ ...emptyFilters(), ...overrides });
 
 // The last request's URL, split into path and decoded parameters.
 const lastGet = () => {
@@ -69,9 +75,7 @@ describe('views/TaskManagerView.vue', () => {
     it('Omits empty filters from the query string', async () => {
         const wrapper = await mountView();
 
-        await wrapper.findComponent({ name: 'TaskFilters' }).vm.$emit('apply', {
-            q: '', status: 'COMPLETED', priority: '', dueBefore: '', sort: ''
-        });
+        await wrapper.findComponent({ name: 'TaskFilters' }).vm.$emit('apply', filters({ status: 'COMPLETED' }));
         await flushPromises();
 
         const { params } = lastGet();
@@ -83,9 +87,10 @@ describe('views/TaskManagerView.vue', () => {
     it('Sends every filter it is given', async () => {
         const wrapper = await mountView();
 
-        await wrapper.findComponent({ name: 'TaskFilters' }).vm.$emit('apply', {
-            q: 'groceries', status: 'PENDING', priority: 'LOW', dueBefore: '2026-07-15', sort: 'dueDate,asc'
-        });
+        await wrapper.findComponent({ name: 'TaskFilters' }).vm.$emit('apply', filters({
+            q: 'groceries', status: 'PENDING', priority: 'LOW', dueBefore: '2026-07-15',
+            sort: 'dueDate,asc', tag: 'work'
+        }));
         await flushPromises();
 
         expect(lastGet().params).toEqual({
@@ -95,16 +100,15 @@ describe('views/TaskManagerView.vue', () => {
             status: 'PENDING',
             priority: 'LOW',
             dueBefore: '2026-07-15',
-            sort: 'dueDate,asc'
+            sort: 'dueDate,asc',
+            tag: 'work'
         });
     });
 
     it('Encodes a search term rather than letting it inject a parameter', async () => {
         const wrapper = await mountView();
 
-        await wrapper.findComponent({ name: 'TaskFilters' }).vm.$emit('apply', {
-            q: 'a&size=999', status: '', priority: '', dueBefore: '', sort: ''
-        });
+        await wrapper.findComponent({ name: 'TaskFilters' }).vm.$emit('apply', filters({ q: 'a&size=999' }));
         await flushPromises();
 
         const { params } = lastGet();
@@ -120,9 +124,7 @@ describe('views/TaskManagerView.vue', () => {
         await flushPromises();
         expect(lastGet().params.page).toBe('3');
 
-        await wrapper.findComponent({ name: 'TaskFilters' }).vm.$emit('apply', {
-            q: 'x', status: '', priority: '', dueBefore: '', sort: ''
-        });
+        await wrapper.findComponent({ name: 'TaskFilters' }).vm.$emit('apply', filters({ q: 'x' }));
         await flushPromises();
         expect(lastGet().params.page).toBe('0');
     });
@@ -219,6 +221,59 @@ describe('views/TaskManagerView.vue', () => {
         await wrapper.find('.error-banner__dismiss').trigger('click');
 
         expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    });
+
+    /**
+     * The whole point of the tags work: ?tag= has been served since tags shipped and no client
+     * ever sent one, so the filter selected on a field nothing populated.
+     */
+    it('Sends the tag filter the backend has always accepted', async () => {
+        const wrapper = await mountView();
+
+        await wrapper.findComponent({ name: 'TaskFilters' }).vm.$emit('apply', filters({ tag: 'urgent' }));
+        await flushPromises();
+
+        expect(lastGet().params).toEqual({ page: '0', size: '10', tag: 'urgent' });
+    });
+
+    /**
+     * The trap this pair exists for. `editTask` shallow-copies the task, which would hand the form
+     * the SAME array the list row renders -- so editing the tag box would rewrite the list before
+     * anything was submitted, and cancelling would leave the change behind.
+     */
+    it('Gives the form its own copy of the tags', async () => {
+        const wrapper = await mountView();
+        const original = task({ id: '7', tags: ['work'] });
+
+        await wrapper.findComponent({ name: 'TaskList' }).vm.$emit('edit-task', original);
+        await wrapper.vm.$nextTick();
+
+        const form = wrapper.findComponent({ name: 'TaskForm' });
+        const handed = (form.props('task') as Task).tags;
+        expect(handed).toEqual(['work']);
+        expect(handed).not.toBe(original.tags);
+    });
+
+    // The server sends no tags field for a task carrying none, so the copy above has to cope with
+    // an absent list rather than spreading undefined.
+    it('Hands the form an empty list when the task has no tags', async () => {
+        const wrapper = await mountView();
+
+        await wrapper.findComponent({ name: 'TaskList' }).vm.$emit('edit-task', task({ tags: undefined }));
+        await wrapper.vm.$nextTick();
+
+        expect((wrapper.findComponent({ name: 'TaskForm' }).props('task') as Task).tags).toEqual([]);
+    });
+
+    it('Sends the tags it was given when creating a task', async () => {
+        const wrapper = await mountView();
+
+        await wrapper.findComponent({ name: 'TaskForm' }).vm.$emit('submit-task', task({ tags: ['work', 'urgent'] }));
+        await flushPromises();
+
+        expect(api.post).toHaveBeenCalledWith('/api/tasks', expect.objectContaining({
+            tags: ['work', 'urgent']
+        }));
     });
 
     it('Renders a message rather than crashing when the API is unreachable', async () => {

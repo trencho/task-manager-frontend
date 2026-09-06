@@ -74,12 +74,16 @@ See [`.env.example`](.env.example).
 | `yarn preview` | Serve the built bundle locally |
 | `yarn lint` | ESLint |
 | `yarn type-check` | `vue-tsc`, which type-checks `.ts` and `.vue` |
-| `yarn test` | Vitest, 94 tests |
+| `yarn test` | Vitest, 118 tests |
 | `yarn coverage` | Vitest + v8 coverage |
 
 CI runs `yarn install --immutable && yarn lint && yarn type-check && yarn coverage && yarn build`
 on every push and pull request. It runs `coverage` rather than `test` so the coverage provider is
-exercised too: the two are otherwise the same 94 tests, and a broken provider passes `yarn test`.
+exercised too: the two are otherwise the same 118 tests, and a broken provider passes `yarn test`.
+
+Coverage thresholds are pinned at 100% for statements, branches, functions and lines
+(`vite.config.ts`). Without them "100% covered" is a number in the output rather than a condition
+the run has to meet.
 See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 ## Architecture
@@ -91,16 +95,19 @@ src/
 ├── env.d.ts                 ambient types (import.meta.env.VITE_API_URL)
 ├── types.ts                 shared domain types (Task, NewTask, PagedTasks, Filters, …)
 ├── router/index.ts          routes + navigation guards
+├── api/
+│   ├── auth.ts              login, register, logout
+│   └── tasks.ts             list/create/update/delete + buildQuery (the query-string builder)
 ├── views/
 │   ├── LoginView.vue        route /login       (requiresGuest)
 │   ├── RegisterView.vue     route /signup      (requiresGuest)
 │   └── TaskManagerView.vue  route /tasks       (requiresAuth)
 ├── components/
-│   ├── LoginForm.vue        posts /api/auth/login
-│   ├── RegisterForm.vue     posts /api/auth/signup
-│   ├── TaskList.vue         renders tasks, paginates, confirms deletes
-│   ├── TaskForm.vue         create/edit a task (title, description, due date, status, priority)
-│   ├── TaskFilters.vue      search, status/priority filters, due-before, and sort
+│   ├── LoginForm.vue        sign-in form
+│   ├── RegisterForm.vue     sign-up form
+│   ├── TaskList.vue         renders tasks and their tags, paginates, confirms deletes
+│   ├── TaskForm.vue         create/edit a task (title, description, due date, status, priority, tags)
+│   ├── TaskFilters.vue      search, status/priority filters, tag, due-before, and sort
 │   ├── ErrorBanner.vue      inline, accessible API-error region (replaced alert())
 │   └── LogoutButton.vue
 ├── constants/
@@ -110,7 +117,8 @@ src/
 ├── utils/
 │   ├── auth.ts              access_token in localStorage (the refresh token is an httpOnly cookie)
 │   ├── axiosSetup.ts        axios instance: Bearer header + 401 refresh-and-retry
-│   └── errorMessage.ts      maps an axios failure to display text for ErrorBanner
+│   ├── errorMessage.ts      maps an axios failure to display text for ErrorBanner
+│   └── tags.ts              parses the comma-separated tag box into a list, and back
 └── tests/unit/              Vitest specs
 ```
 
@@ -150,7 +158,7 @@ cannot recurse back into the refresh handler.
 | Sign in | `POST /api/auth/login` |
 | Refresh | `POST /api/auth/refresh-token`, no body; the cookie is the credential, and a rotated one comes back |
 | Sign out | `POST /api/auth/logout`, no body; revokes the refresh token and clears the cookie |
-| List | `GET /api/tasks`, paginated (`page`, `size`), with optional `q`, `status`, `priority`, `dueBefore`, and `sort` from the filter bar |
+| List | `GET /api/tasks`, paginated (`page`, `size`), with optional `q`, `status`, `priority`, `tag`, `dueBefore`, and `sort` from the filter bar |
 | Create | `POST /api/tasks` |
 | Update | `PUT /api/tasks/{id}` |
 | Delete | `DELETE /api/tasks/{id}` |

@@ -9,6 +9,11 @@
         <strong class="task-title">{{ task.title }}</strong>: {{ task.description }} - <em>Due: {{ task.dueDate }}</em>
         <span class="task-status">{{ statusLabel(task.status) }}</span>
         <span class="task-priority">{{ priorityLabel(task.priority) }}</span>
+        <span
+          v-for="tag in task.tags"
+          :key="tag"
+          class="task-tag"
+        >{{ tag }}</span>
         <button
           class="edit"
           @click="editTask(task)"
@@ -81,3 +86,14 @@ const previousPage = (): void => {
   emit('change-page', props.page - 1);
 };
 </script>
+
+<style scoped>
+.task-tag {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  margin-left: 0.25rem;
+  border-radius: 0.75rem;
+  background: rgba(127, 127, 127, 0.18);
+  font-size: 0.85em;
+}
+</style>

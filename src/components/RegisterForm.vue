@@ -38,7 +38,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import ErrorBanner from '@/components/ErrorBanner.vue';
-import axiosInstance from '@/utils/axiosSetup';
+import { register as registerRequest } from '@/api/auth';
 import { apiErrorMessage } from '@/utils/errorMessage';
 
 const router = useRouter();
@@ -50,7 +50,7 @@ const error = ref('');
 const register = async (): Promise<void> => {
   error.value = '';
   try {
-    await axiosInstance.post('/api/auth/signup', {
+    await registerRequest({
       username: username.value,
       email: email.value,
       password: password.value

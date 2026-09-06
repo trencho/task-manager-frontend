@@ -55,6 +55,43 @@ describe('TaskForm.vue', () => {
         expect(submitted.priority).toBe('HIGH');
     });
 
+    it('Emits the tags typed into the box, as a list', async () => {
+        const wrapper = mountForm({title: 'Write tests'});
+
+        await wrapper.find('#task-tags').setValue('work, urgent');
+        await wrapper.find('form').trigger('submit');
+
+        const submitted = wrapper.emitted('submit-task')?.[0]?.[0] as NewTask;
+        expect(submitted.tags).toEqual(['work', 'urgent']);
+    });
+
+    /**
+     * An empty list is meaningful and is NOT the same as omitting the field: the server reads an
+     * absent `tags` as leave-alone and an empty one as clear, so emptying the box is the only way
+     * a user can remove every tag.
+     */
+    it('Emits an empty list when the box is cleared', async () => {
+        const wrapper = mountForm({tags: ['work']}, true);
+
+        await wrapper.find('#task-tags').setValue('');
+        await wrapper.find('form').trigger('submit');
+
+        const submitted = wrapper.emitted('submit-task')?.[0]?.[0] as NewTask;
+        expect(submitted.tags).toEqual([]);
+    });
+
+    it('Shows the tags of the task it is given, and of the task it is switched to', async () => {
+        const wrapper = mountForm({tags: ['work']}, true);
+        expect((wrapper.find('#task-tags').element as HTMLInputElement).value).toBe('work');
+
+        // The parent swaps the whole object in when the user picks a different task to edit.
+        await wrapper.setProps({
+            task: {title: 'Other', description: '', dueDate: '', status: 'PENDING', priority: 'LOW', tags: ['home']}
+        });
+
+        expect((wrapper.find('#task-tags').element as HTMLInputElement).value).toBe('home');
+    });
+
     it('Labels the button by mode', () => {
         expect(mountForm({}, false).find('button').text()).toContain('Create');
         expect(mountForm({}, true).find('button').text()).toContain('Update');
