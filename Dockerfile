@@ -58,10 +58,15 @@ COPY --from=build /usr/src/app/dist /usr/share/nginx/html
 # The template listens on 80; docker-compose maps 8080:80.
 EXPOSE 80
 
-# 127.0.0.1, not localhost. In this image `localhost` resolves to ::1 ONLY, while the template
-# says `listen 80;` so nginx binds 0.0.0.0:80 -- the probe dialled an address nothing was listening
-# on, and the container reported `unhealthy` forever. Measured on both 1.30-alpine and 1.31-alpine,
-# so it was never about the base image.
+# 127.0.0.1, not localhost, and the reason is the CLIENT rather than the name. /etc/hosts here maps
+# localhost to both 127.0.0.1 and ::1, and getaddrinfo returns ::1 FIRST. busybox wget -- the only
+# HTTP client in this image -- tries that first address and gives up, while nginx binds 0.0.0.0:80
+# because the template says `listen 80;`. So the probe dialled [::1]:80, found nothing, and the
+# container reported `unhealthy` forever.
+#
+# curl and python's urllib walk the whole getaddrinfo list and would have fallen through to IPv4,
+# which is why this shape is specific to a busybox image: the sibling backend's curl-based check
+# was never at risk. Measured on both 1.30-alpine and 1.31-alpine, so it was never the base version.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
     CMD wget -qO /dev/null http://127.0.0.1/ || exit 1
 
