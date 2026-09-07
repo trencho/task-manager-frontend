@@ -70,5 +70,19 @@ jobs:
       # No push and no registry login: this repo publishes no images. The step exists so a broken
       # Dockerfile fails on the PR that breaks it rather than the next time someone needs an image.
       # VITE_API_URL is left unset on purpose, which is the same-origin default the README documents.
+      # buildx, for the layer cache. The Dockerfile already mounts a Yarn cache
+      # (`RUN --mount=type=cache,target=/root/.yarn/berry/cache`), but a cache MOUNT lives in the
+      # builder's local state and every CI run gets a fresh builder, so it starts empty every time --
+      # the install inside the image re-fetches what the job's own `cache: yarn` already restored.
+      # type=gha persists the LAYERS across runs, which is the part a mount cannot do. mode=max
+      # because this is a multi-stage build: without it the `build` stage, which holds the install,
+      # is not exported and only the nginx stage would be cached.
+      - uses: docker/setup-buildx-action@v4
       - name: Build the container image
-        run: docker build -t task-manager-vue:ci .
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: false
+          tags: task-manager-vue:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
