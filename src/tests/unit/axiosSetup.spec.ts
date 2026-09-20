@@ -4,36 +4,43 @@ import { vi, type Mock } from 'vitest';
 // import time. Mocking axios lets us capture those handlers and drive them directly, which is
 // the only way to exercise the 401 refresh path without a server. vi.mock is hoisted above the
 // imports below.
-vi.mock('axios', () => {
+//
+// Everything the tests need is captured HERE, inside vi.hoisted, rather than read back out of
+// `mock.calls` / `mock.results` afterwards. Vitest 5 does not retain mock history recorded during
+// module initialisation: with the old shape, `axios.create.mock.calls.length` was 0 by the time
+// the first test ran, so `mock.results[1].value` threw and all 15 tests in this file failed. The
+// calls still happen; only the recording is gone. Capturing them in the factory reads the values
+// at the moment they are produced, so it does not rely on mock history surviving at all.
+const stub = vi.hoisted(() => {
     // axiosSetup creates TWO clients: the main instance (callable, because the response
     // interceptor retries by invoking it) and a bare refreshClient with no interceptors.
     const instance = vi.fn() as Mock & {
         interceptors: { request: { use: Mock }; response: { use: Mock } };
     };
+    const requestHandlers: unknown[][] = [];
+    const responseHandlers: unknown[][] = [];
     instance.interceptors = {
-        request: { use: vi.fn() },
-        response: { use: vi.fn() }
+        request: { use: vi.fn((...args: unknown[]) => void requestHandlers.push(args)) },
+        response: { use: vi.fn((...args: unknown[]) => void responseHandlers.push(args)) }
     };
     const refreshClient = { post: vi.fn() };
 
+    const createArgs: Record<string, unknown>[] = [];
     let call = 0;
-    return {
-        __esModule: true,
-        default: {
-            create: vi.fn(() => (call++ === 0 ? instance : refreshClient))
-        }
-    };
+    const create = vi.fn((config: Record<string, unknown>) => {
+        createArgs.push(config);
+        return call++ === 0 ? instance : refreshClient;
+    });
+
+    return { instance, refreshClient, create, createArgs, requestHandlers, responseHandlers };
 });
 
-import axios from 'axios';
-import axiosInstanceDefault from '@/utils/axiosSetup';
+vi.mock('axios', () => ({ __esModule: true, default: { create: stub.create } }));
+
+import '@/utils/axiosSetup';
 import { getAccessToken, setAccessToken } from '@/utils/auth';
 
-// The mock replaces these with vi.fn()s; the real axios types don't know that, so narrow here.
-const mockedCreate = axios.create as unknown as Mock;
-const instance = axiosInstanceDefault as unknown as Mock & {
-    interceptors: { request: { use: Mock }; response: { use: Mock } };
-};
+const instance = stub.instance;
 
 interface RequestConfig { headers: Record<string, string>; _retry?: boolean; url?: string }
 interface ErrorLike { response?: { status: number }; config?: RequestConfig }
@@ -43,12 +50,12 @@ type ResponseFulfilled = (response: unknown) => unknown;
 type ResponseRejected = (error: unknown) => Promise<unknown>;
 
 // The second axios.create() call is the refresh client.
-const refreshClient = () => mockedCreate.mock.results[1].value as { post: Mock };
+const refreshClient = () => stub.refreshClient;
 
-const onRequest = () => instance.interceptors.request.use.mock.calls[0][0] as RequestFulfilled;
-const onRequestError = () => instance.interceptors.request.use.mock.calls[0][1] as RequestRejected;
-const onResponse = () => instance.interceptors.response.use.mock.calls[0][0] as ResponseFulfilled;
-const onResponseError = () => instance.interceptors.response.use.mock.calls[0][1] as ResponseRejected;
+const onRequest = () => stub.requestHandlers[0][0] as RequestFulfilled;
+const onRequestError = () => stub.requestHandlers[0][1] as RequestRejected;
+const onResponse = () => stub.responseHandlers[0][0] as ResponseFulfilled;
+const onResponseError = () => stub.responseHandlers[0][1] as ResponseRejected;
 
 describe('utils/axiosSetup', () => {
     beforeEach(() => {
@@ -70,11 +77,11 @@ describe('utils/axiosSetup', () => {
      */
     describe('client configuration', () => {
         it('Creates the shared instance with credentials, so login can set the refresh cookie', () => {
-            expect(mockedCreate.mock.calls[0][0]).toMatchObject({ withCredentials: true });
+            expect(stub.createArgs[0]).toMatchObject({ withCredentials: true });
         });
 
         it('Creates the refresh client with credentials too', () => {
-            expect(mockedCreate.mock.calls[1][0]).toMatchObject({ withCredentials: true });
+            expect(stub.createArgs[1]).toMatchObject({ withCredentials: true });
         });
     });
 
