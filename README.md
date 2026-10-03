@@ -85,6 +85,11 @@ Coverage thresholds are pinned at 100% for statements, branches, functions and l
 (`vite.config.ts`). Without them "100% covered" is a number in the output rather than a condition
 the run has to meet.
 See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+Dependabot PRs merge from the `auto-merge` job in the same workflow once that build passes;
+pre-release targets and GitHub Actions bumps are held for a human.
+
+`yarn install` also enables a pre-commit hook (`.githooks/pre-commit`) that runs `eslint --fix` on
+the staged files. `git commit --no-verify` skips it.
 
 ## Architecture
 
