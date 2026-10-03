@@ -78,7 +78,7 @@ updates:
     commit-message:
       prefix: chore
     # No update-type restriction: majors, minors and patches all flow, and the guard that matters
-    # for images -- blocking a RELEASE-CANDIDATE tag -- lives in dependabot-auto-merge.yml instead.
+    # for images -- blocking a RELEASE-CANDIDATE tag -- lives in ci.yml's auto-merge job instead.
     # It has to: `docker` matches TAGS, which carry no release-channel metadata, so
     # `python:3.14.6-slim` -> `python:3.15.0rc1-slim` scores an ordinary MINOR, and
     # `ignore.versions` takes version RANGES rather than globs (dependabot-core#15154), so

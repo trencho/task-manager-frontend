@@ -1,0 +1,79 @@
+#!/bin/sh
+# Pre-commit hook: `eslint --fix` on the files staged for this commit. ESLint is this repo's only
+# formatter (eslint-plugin-vue carries the template formatting rules), and `yarn lint` is the CI gate.
+#
+# A file staged whole is fixed and re-added. A file that also has unstaged edits is only CHECKED:
+# fixing and re-adding it would sweep the unstaged hunks into the commit. The check reads the STAGED
+# content (`git show :<path>` piped to `eslint --stdin`), so an unstaged line can neither fail nor
+# pass it. Fix what it reports and stage that, or stage the file whole.
+#
+# Enabled by `yarn install` (the `postinstall` script sets core.hooksPath). `git commit --no-verify`
+# skips the hook. Type-checking and the tests stay in CI: they take minutes, and a slow hook gets
+# bypassed.
+set -eu
+
+eslint=node_modules/.bin/eslint
+# eslint-plugin-vue reports its formatting rules as WARNINGS, so without --max-warnings 0 a staged
+# file that is only checked (see above) would pass however it is laid out. The tree has no warnings
+# today; `yarn lint` in CI is looser and still passes on warnings.
+max_warnings='--max-warnings 0'
+# Lint only what eslint is configured for.
+lint_ext='\.(vue|ts|tsx|js|jsx|mjs|cjs)$'
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+# -z gives raw names: without it git quotes any path with a non-ASCII byte, and the quoted form
+# names no file. The sets below are built one name per line, so a name containing a newline cannot
+# be represented; refuse it rather than lint the wrong file.
+git diff --cached -z --name-only --diff-filter=ACMR >"$tmp/staged0"
+git diff -z --name-only >"$tmp/partial0"
+if [ "$(tr -cd '\n' <"$tmp/staged0" | wc -c)" -ne 0 ]; then
+  echo "pre-commit: a staged path contains a newline; lint it by hand and commit with --no-verify" >&2
+  exit 1
+fi
+tr '\0' '\n' <"$tmp/staged0" | grep -E "$lint_ext" >"$tmp/staged" || true
+tr '\0' '\n' <"$tmp/partial0" >"$tmp/partial"
+[ -s "$tmp/staged" ] || exit 0
+# Checked only once there is something to lint, so a docs-only commit needs no install.
+if [ ! -x "$eslint" ]; then
+  echo "pre-commit: $eslint not found; install the dependencies first (yarn install --immutable)" >&2
+  exit 1
+fi
+
+# Explicit for the common case of no unstaged edits: `grep -f` with an empty pattern file matches
+# nothing on some greps and everything on others.
+if [ -s "$tmp/partial" ]; then
+  grep -vxF -f "$tmp/partial" "$tmp/staged" >"$tmp/rewrite" || true
+  grep -xF -f "$tmp/partial" "$tmp/staged" >"$tmp/check" || true
+else
+  cp "$tmp/staged" "$tmp/rewrite"
+  : >"$tmp/check"
+fi
+
+# run <file list> <command...>: the command with every listed path appended, NUL-separated so a
+# space in a name stays inside one argument. Nothing runs for an empty list.
+run() {
+  list=$1
+  shift
+  [ -s "$list" ] || return 0
+  tr '\n' '\0' <"$list" | xargs -0 "$@"
+}
+
+status=0
+# shellcheck disable=SC2086 # $max_warnings is two words on purpose
+run "$tmp/rewrite" "$eslint" --fix --no-warn-ignored $max_warnings || status=1
+# Re-add even after a failure, so what eslint did fix is in the index.
+run "$tmp/rewrite" git add --
+
+# Each partially staged file is checked as the index holds it.
+while IFS= read -r f; do
+  git show ":$f" >"$tmp/blob"
+  # shellcheck disable=SC2086 # likewise
+  "$eslint" --no-warn-ignored $max_warnings --stdin --stdin-filename "$f" <"$tmp/blob" || status=1
+done <"$tmp/check"
+
+if [ "$status" -ne 0 ]; then
+  echo "pre-commit: fix the problems above, or commit with --no-verify" >&2
+fi
+exit "$status"

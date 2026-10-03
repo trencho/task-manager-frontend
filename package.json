@@ -15,7 +15,8 @@
     "type-check": "vue-tsc -b --force",
     "test": "vitest run",
     "test:watch": "vitest",
-    "coverage": "vitest run --coverage"
+    "coverage": "vitest run --coverage",
+    "postinstall": "git config core.hooksPath .githooks || true"
   },
   "dependencies": {
     "axios": "1.20.0",

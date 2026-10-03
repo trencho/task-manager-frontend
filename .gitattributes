@@ -1,4 +1,5 @@
 # Normalize line endings. Shell scripts and config consumed by Linux containers stay LF.
 * text=auto
 *.sh text eol=lf
+.githooks/* text eol=lf
 *.cmd text eol=crlf
