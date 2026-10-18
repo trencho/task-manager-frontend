@@ -24,9 +24,75 @@ jobs:
   build:
     name: lint + test + build
     runs-on: ubuntu-latest
+    # A job-level block replaces the workflow-level one, so contents: read is repeated here.
+    # actions: read and pull-requests: read are for the `tested` step only, and only this job gets
+    # them; auto-merge keeps its own block.
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
 
     steps:
       - uses: actions/checkout@v7
+
+      # On a push to master, or the auto-merge job's dispatch (GITHUB_TOKEN, so the actor is
+      # github-actions[bot]), skip lint, type-check, tests and the bundle build when the PR already
+      # verified this exact tree: this commit is a merged PR's merge commit, the PR head has the
+      # identical tree, and the JOB_NAME job of a pull_request run of ci.yml on that head succeeded.
+      # The lookup reads the job, not the whole run, because auto-merge dispatches master from inside
+      # the PR run before that run concludes. Everything else runs the checks: a direct push, a PR
+      # merged while behind master, a PR job that failed, is missing or was cancelled, and any API
+      # error. The step does not run on a pull request or a manual dispatch, so there every gated
+      # step runs; dispatch CI by hand to get an extra shuffle seed. Setup, install and the image
+      # build never skip, because they fill the master caches that PRs restore. The owner accepted
+      # the cost on 2026-10-18: master no longer tries a second shuffle seed for each merge.
+      - name: Check whether a pull request already tested this tree
+        id: tested
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.triggering_actor == 'github-actions[bot]')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          # The display name the jobs API reports for this job (its `name:` above).
+          JOB_NAME: lint + test + build
+        run: |
+          tested=false
+          reason="no merged pull request has this commit as its merge commit"
+          pr=$(gh api "repos/$REPO/commits/$SHA/pulls" \
+            --jq "[.[] | select(.merge_commit_sha == \"$SHA\")][0] // empty | \"\(.number) \(.head.sha)\"") ||
+            { pr=""; reason="the pull request lookup failed"; }
+          if [ -n "$pr" ]; then
+            num=${pr%% *}
+            head=${pr##* }
+            merged_tree=$(gh api "repos/$REPO/git/commits/$SHA" --jq .tree.sha) || merged_tree=""
+            head_tree=$(gh api "repos/$REPO/git/commits/$head" --jq .tree.sha) || head_tree=""
+            if [ -z "$merged_tree" ] || [ "$merged_tree" != "$head_tree" ]; then
+              reason="#$num's head tree differs from the merged tree"
+            else
+              if ! runs=$(gh api "repos/$REPO/actions/runs?head_sha=$head&event=pull_request&per_page=100" \
+                --jq '.workflow_runs[] | select(.path == ".github/workflows/ci.yml") | .id'); then
+                reason="the run lookup for #$num's head ${head:0:7} failed"
+              else
+                reason="no successful '$JOB_NAME' job on #$num's head ${head:0:7}"
+                for id in $runs; do
+                  if ! jobs=$(gh api "repos/$REPO/actions/runs/$id/jobs?filter=latest&per_page=100" \
+                    --jq "[.jobs[] | select(.name == \"$JOB_NAME\" and .conclusion == \"success\")] | length"); then
+                    reason="the job lookup for run $id failed"
+                    continue
+                  fi
+                  if [ "${jobs:-0}" -gt 0 ] 2>/dev/null; then
+                    tested=true
+                    reason="#$num's head ${head:0:7} has the same tree and its '$JOB_NAME' job passed in run $id"
+                    break
+                  fi
+                done
+              fi
+            fi
+          fi
+          echo "tested=$tested" >> "$GITHUB_OUTPUT"
+          if [ "$tested" = true ]; then verdict="Checks skipped"; else verdict="Checks run"; fi
+          echo "$verdict: $reason"
+          echo "$verdict: $reason" >> "$GITHUB_STEP_SUMMARY"
 
       # Activate the Corepack-pinned Yarn (package.json "packageManager") before setup-node,
       # so its cache: yarn step can resolve Yarn's cache folder. Uses the runner's Node.
@@ -44,10 +110,12 @@ jobs:
         run: yarn install --immutable
 
       - name: Lint
+        if: steps.tested.outputs.tested != 'true'
         run: yarn lint
 
       # vue-tsc is the type gate; Vite/Vitest transpile TS but do not type-check it.
       - name: Type-check
+        if: steps.tested.outputs.tested != 'true'
         run: yarn type-check
 
       # Why this is its own gate: the suite once silently ran ZERO tests for months. That was
@@ -69,6 +137,7 @@ jobs:
       # the same order, so fix the test or dispatch CI for a new seed. The log and the run summary name
       # the seed, and `yarn coverage --sequence.shuffle --sequence.seed=<seed>` reproduces it.
       - name: Test
+        if: steps.tested.outputs.tested != 'true'
         env:
           SEED: ${{ github.run_id }}
         run: |
@@ -76,7 +145,9 @@ jobs:
           echo "Shuffled test order, seed \`$SEED\`" >> "$GITHUB_STEP_SUMMARY"
           yarn coverage --sequence.shuffle "--sequence.seed=$SEED"
 
+      # dist/ feeds nothing later: .dockerignore excludes it and the image build runs its own.
       - name: Build
+        if: steps.tested.outputs.tested != 'true'
         run: yarn build
 
       # The Dockerfile is the one artifact nothing here exercised. `yarn build` proves the bundle
