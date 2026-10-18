@@ -63,8 +63,18 @@ jobs:
       # @vitest/coverage-v8 on different majors, install (even --immutable), lint, type-check,
       # test and build ALL pass while `yarn coverage` fails and reports 0% of 239 statements. The
       # one command that could see the breakage was the one command CI did not run.
+      #
+      # Every run shuffles the files and the tests inside each file, so a test that leans on another's
+      # leftover mock or module state fails here. The seed is the run id: a re-run keeps it and replays
+      # the same order, so fix the test or dispatch CI for a new seed. The log and the run summary name
+      # the seed, and `yarn coverage --sequence.shuffle --sequence.seed=<seed>` reproduces it.
       - name: Test
-        run: yarn coverage
+        env:
+          SEED: ${{ github.run_id }}
+        run: |
+          echo "Shuffled test order, seed $SEED"
+          echo "Shuffled test order, seed \`$SEED\`" >> "$GITHUB_STEP_SUMMARY"
+          yarn coverage --sequence.shuffle "--sequence.seed=$SEED"
 
       - name: Build
         run: yarn build
