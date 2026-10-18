@@ -35,20 +35,26 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Off a pull request, skip lint, type-check, tests and the bundle build when the PR already
+      # On a push to master, or the auto-merge job's dispatch (GITHUB_TOKEN, so the actor is
+      # github-actions[bot]), skip lint, type-check, tests and the bundle build when the PR already
       # verified this exact tree: this commit is a merged PR's merge commit, the PR head has the
-      # identical tree, and a pull_request run of ci.yml on that head succeeded. Everything else
-      # runs the checks: a direct push, a PR merged while behind master, a PR run that failed, is
-      # missing or was cancelled, and any API error. The step does not run on a pull request, so
-      # there every gated step runs. The owner accepted the cost on 2026-10-18: master no longer
-      # tries a second shuffle seed for each merge.
+      # identical tree, and the JOB_NAME job of a pull_request run of ci.yml on that head succeeded.
+      # The lookup reads the job, not the whole run, because auto-merge dispatches master from inside
+      # the PR run before that run concludes. Everything else runs the checks: a direct push, a PR
+      # merged while behind master, a PR job that failed, is missing or was cancelled, and any API
+      # error. The step does not run on a pull request or a manual dispatch, so there every gated
+      # step runs; dispatch CI by hand to get an extra shuffle seed. Setup, install and the image
+      # build never skip, because they fill the master caches that PRs restore. The owner accepted
+      # the cost on 2026-10-18: master no longer tries a second shuffle seed for each merge.
       - name: Check whether a pull request already tested this tree
         id: tested
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.triggering_actor == 'github-actions[bot]')
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           SHA: ${{ github.sha }}
+          # The display name the jobs API reports for this job (its `name:` above).
+          JOB_NAME: lint + test + build
         run: |
           tested=false
           reason="no merged pull request has this commit as its merge commit"
@@ -63,14 +69,23 @@ jobs:
             if [ -z "$merged_tree" ] || [ "$merged_tree" != "$head_tree" ]; then
               reason="#$num's head tree differs from the merged tree"
             else
-              runs=$(gh api "repos/$REPO/actions/runs?head_sha=$head&event=pull_request&per_page=100" \
-                --jq '[.workflow_runs[] | select(.path == ".github/workflows/ci.yml" and .conclusion == "success")] | length') ||
-                runs=""
-              if [ "${runs:-0}" -gt 0 ] 2>/dev/null; then
-                tested=true
-                reason="#$num's head ${head:0:7} has the same tree and its ci.yml run succeeded"
+              if ! runs=$(gh api "repos/$REPO/actions/runs?head_sha=$head&event=pull_request&per_page=100" \
+                --jq '.workflow_runs[] | select(.path == ".github/workflows/ci.yml") | .id'); then
+                reason="the run lookup for #$num's head ${head:0:7} failed"
               else
-                reason="#$num's head ${head:0:7} has no successful pull_request run of ci.yml"
+                reason="no successful '$JOB_NAME' job on #$num's head ${head:0:7}"
+                for id in $runs; do
+                  if ! jobs=$(gh api "repos/$REPO/actions/runs/$id/jobs?filter=latest&per_page=100" \
+                    --jq "[.jobs[] | select(.name == \"$JOB_NAME\" and .conclusion == \"success\")] | length"); then
+                    reason="the job lookup for run $id failed"
+                    continue
+                  fi
+                  if [ "${jobs:-0}" -gt 0 ] 2>/dev/null; then
+                    tested=true
+                    reason="#$num's head ${head:0:7} has the same tree and its '$JOB_NAME' job passed in run $id"
+                    break
+                  fi
+                done
               fi
             fi
           fi
