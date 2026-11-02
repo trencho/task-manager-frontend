@@ -17,16 +17,17 @@
 # lines get them routinely. Nothing passed those ARGs either: docker-compose.yml's `build:` block
 # has no `args:` and no workflow passes --build-arg. They only hid the versions from the updater.
 # Keep the version on the FROM line.
-FROM node:24.22.2-alpine AS build
+FROM node:26.13.0-alpine AS build
 
 WORKDIR /usr/src/app
 
 # `yarn install --immutable` installs exactly the committed yarn.lock and fails if it and
-# package.json disagree. Copy only the manifests first so this layer caches. Corepack (bundled
-# with the Node image) activates the Yarn pinned in package.json's "packageManager".
+# package.json disagree. Copy only the manifests first so this layer caches. Corepack activates
+# the Yarn pinned in package.json's "packageManager"; Node 25+ no longer bundles it, so it is
+# installed first, pinned like everything else.
 COPY package.json yarn.lock .yarnrc.yml ./
 RUN --mount=type=cache,target=/root/.yarn/berry/cache \
-    corepack enable && yarn install --immutable
+    npm install -g corepack@0.36.0 && corepack enable && yarn install --immutable
 
 COPY . .
 

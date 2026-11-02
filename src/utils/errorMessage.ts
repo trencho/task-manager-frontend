@@ -47,4 +47,3 @@ export function apiErrorMessage(error: unknown): string {
   return FALLBACK;
 }
 
-export default apiErrorMessage;

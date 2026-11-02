@@ -101,8 +101,15 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: yarn
+
+      # Node 25 stopped bundling corepack. The step above setup-node ran the runner's own Node,
+      # which still has it, so setup-node can read Yarn's cache folder; this one gives the .nvmrc
+      # Node its own corepack, so every yarn below runs on the Node CI tests. Same pin as the
+      # Dockerfile.
+      - name: Corepack for the .nvmrc Node
+        run: npm install -g corepack@0.36.0 && corepack enable
 
       # `--immutable` installs exactly the committed yarn.lock and fails if package.json and
       # the lockfile disagree. A plain `yarn install` would quietly rewrite the lockfile.
