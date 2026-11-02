@@ -116,12 +116,15 @@ jobs:
       #
       # This job is monthly, so its own entry is always evicted before the next run: the win is
       # sharing ci.yml's cache, which only happens if this key matches CI's. It does -- ci.yml
-      # runs on `push`, so its cache is master-scoped and restorable from here, and both pin the
-      # same node-version.
+      # runs on `push`, so its cache is master-scoped and restorable from here, and both read the
+      # same .nvmrc.
       - name: Enable Corepack
         run: corepack enable
       - uses: actions/setup-node@v7
-        with: { node-version: '24', cache: 'yarn' }
+        with: { node-version-file: .nvmrc, cache: 'yarn' }
+      # Node 25 stopped bundling corepack; give the .nvmrc Node its own (same pin as ci.yml).
+      - name: Corepack for the .nvmrc Node
+        run: npm install -g corepack@0.36.0 && corepack enable
       - name: Install dependencies (knip needs them resolved)
         run: |
           if [ -f yarn.lock ]; then yarn install --immutable

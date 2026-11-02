@@ -33,11 +33,12 @@ updates:
         update-types: [minor, patch]
     ignore:
       # @types/node tracks the RUNTIME major, always -- typings for a Node the project does not run
-      # describe APIs that are not there. It reached 26.2.0 while the image was briefly on Node 26;
-      # both are back on 24. Same release condition as the image, so the two lift together.
-      # lift-when: eol-lts nodejs 26
+      # describe APIs that are not there. Runtime and typings moved to Node 26 together on
+      # 2026-11-02, after its LTS date (2026-10-28). Node 27 never becomes LTS, so the next lift
+      # is Node 28's. Same release condition as the image, so the two lift together.
+      # lift-when: eol-lts nodejs 28
       - dependency-name: "@types/node"
-        versions: [">=25"]
+        versions: [">=27"]
       #
       # The eslint / eslint-plugin-vue major holds were LIFTED on 2026-08-16, their release
       # condition having been met: the repo is on eslint 10.8.1 with eslint-plugin-vue 10.10.0,
@@ -88,8 +89,8 @@ updates:
     # references/runtime-lts-policy.md. The same missing tag metadata means Dependabot cannot tell
     # an LTS major from a Current one -- node:24 -> node:26 scored an ordinary major and merged a
     # NON-LTS runtime into this image on 2026-08-16, two months before Node 26's LTS date, with CI
-    # green because CI was still installing Node 24. Major-only: patches within the 24 line still
-    # flow.
+    # green because CI was still installing Node 24. Major-only: patches within the current LTS
+    # line still flow. On Node 26 since 2026-11-02.
     #
     # SECOND CARVE-OUT, added 2026-09-06. This block used to say nginx was "deliberately NOT held --
     # it has its own support policy, not an LTS line". The first half is true and the conclusion did
@@ -111,9 +112,9 @@ updates:
     # `ignore.versions` takes version RANGES rather than globs, so "odd minors" is inexpressible;
     # holding above the next stable minor is the same rule in a form the config has.
     ignore:
-      # lift-when: eol-lts nodejs 26
+      # lift-when: eol-lts nodejs 28
       - dependency-name: "node"
-        versions: [">=25"]
+        versions: [">=27"]
       # lift-when: manual nginx 1.32 (the next STABLE, even-numbered minor) is released; then move
       # the Dockerfile to 1.32-alpine and re-set this hold to >=1.33.
       - dependency-name: "nginx"
